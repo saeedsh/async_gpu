@@ -21,6 +21,8 @@ private:
 	uint nModel;
 	uint nComp;
 
+	vector<unsigned int> _ids;
+
 	//Connection Fields
 	PN2S_Field<T, arch>  _hm;	// Hines Matrices
 	PN2S_Field<T, arch>  _rhs;	// Right hand side of the equation

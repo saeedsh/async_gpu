@@ -20,6 +20,7 @@
 void PN2S_Proxy::Setup(double dt)
 {
 	PN2S_Manager::Setup(dt);
+	_objects.clear();
 }
 
 void PN2S_Proxy::InsertCompartmentModel(Eref master_hsolve, Id seed){
@@ -39,7 +40,10 @@ void PN2S_Proxy::InsertCompartmentModel(Eref master_hsolve, Id seed){
 	// A map from the MOOSE Id to Hines' index.
 	map< Id, unsigned int > hinesIndex;
 	for ( unsigned int i = 0; i < nCompt; ++i )
+	{
 		hinesIndex[ compartmentIds[ i ] ] = i;
+		_objects[compartmentIds[ i ].value()] = compartmentIds[ i ];
+	}
 
 	vector< Id > childId;
 	vector< Id >::iterator child;

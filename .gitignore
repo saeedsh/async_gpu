@@ -1,7 +1,7 @@
 #  Build folder 
 buildMooseUsingCmake
 tags
-./moose
+moose
 *.plot
 *.gnuplot
 *.ps

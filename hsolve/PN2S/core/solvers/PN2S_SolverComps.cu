@@ -171,7 +171,7 @@ Error_PN2S PN2S_SolverComps<T,arch>::UpdateMatrix()
 						_Rm.DeviceEnd())),
 
 		update_rhs_functor< T >( _dt ) );
-//
+
 //	getVector(vectorSize, _rhs,_rhs_dev); //TODO maybe is not necessary
 
 	return Error_PN2S::NO_ERROR;

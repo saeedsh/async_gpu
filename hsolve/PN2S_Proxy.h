@@ -29,5 +29,6 @@ private:
 
 	static void zombify( Element* solver, Element* orig);
 
+	static map< unsigned int, Id > _objects;
 };
 #endif // !defined(EA_27150678_5056_4754_82F6_A77DCEB1BC1C__INCLUDED_)
