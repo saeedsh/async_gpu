@@ -1,4 +1,5 @@
-async_gpu
-=========
+This is a unofficial mirror of NCBS's [Moose](http://moose.ncbs.res.in).
 
-A CUDA implementation for MOOSE simulator
+[![Build Status](https://travis-ci.org/dilawar/moose.svg?branch=master)](https://travis-ci.org/dilawar/moose)
+
+
