@@ -21,10 +21,11 @@ public:
 	double GetDt(){ return _dt;}
 	void SetDt(double dt){ _dt = dt; _compsSolver.SetDt(dt); }
 
-	Error_PN2S PrepareSolver(vector<PN2SModel<T,arch> > &models);
+	Error_PN2S Reinit(vector<PN2SModel<T,arch> > &models);
 
 	Error_PN2S Process();
-	Error_PN2S AddOutput();
+	Error_PN2S Output();
+	Error_PN2S Input();
 //	vector<vector<PN2SModel_Base> > models; //TODO: Encapsulation
 
 	PN2S_SolverComps<CURRENT_TYPE,CURRENT_ARCH> _compsSolver; //TODO Encapsulation

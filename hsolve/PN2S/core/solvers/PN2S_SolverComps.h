@@ -20,8 +20,7 @@ private:
 	double _dt;
 	uint nModel;
 	uint nComp;
-
-	vector<unsigned int> _ids;
+	vector<uint> _ids;
 
 	//Connection Fields
 	PN2S_Field<T, arch>  _hm;	// Hines Matrices
@@ -32,7 +31,7 @@ private:
 	PN2S_Field<T, arch>  _Rm;	// Rm of the compartments
 
 	void  makeHinesMatrix(PN2SModel<T,arch> *model, T * matrix);// float** matrix, uint nCompt);
-
+	void getValues();
 public:
 	PN2S_SolverComps();
 	~PN2S_SolverComps();
@@ -50,5 +49,9 @@ public:
 	T GetRm(int n,int i){return _Rm[n*nComp+i];}
 	T GetEm(int n,int i){return _Em[n*nComp+i];}
 
+	//Setter and Getter
+	enum Fields {CM_FIELD, EM_FIELD, RM_FIELD, RA_FIELD,INIT_VM_FIELD, VM_FIELD};
+
+	static T (*GetValue_Func) (uint id, Fields field);
 };
 #endif // !defined(EA_ABB95B66_E531_4681_AE2B_D1CE4B940FF6__INCLUDED_)

@@ -41,7 +41,7 @@ void PN2S_Manager::InsertModel(PN2SModel<CURRENT_TYPE, CURRENT_ARCH> &neutral){
 
 
 Error_PN2S PN2S_Manager::PrepareSolver(){
-	Error_PN2S res = _deviceManager.Setup(_models,_dt);
+	Error_PN2S res = _deviceManager.Reinit(_models,_dt);
 
 //	if( res == NO_ERROR)
 //		models.clear();

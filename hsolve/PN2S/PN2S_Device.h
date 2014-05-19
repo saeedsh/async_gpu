@@ -23,7 +23,7 @@ public:
 	PN2S_Device(int _id);
 	virtual ~PN2S_Device();
 
-	Error_PN2S PrepareSolver(vector<PN2SModel<CURRENT_TYPE,CURRENT_ARCH> > &m,  double dt);
+	Error_PN2S Reinit(vector<PN2SModel<CURRENT_TYPE,CURRENT_ARCH> > &m,  double dt);
 	void Process();
 	Error_PN2S Setup();
 

@@ -105,7 +105,7 @@ USE_GSL = 1
 endif
 # Profiling mode with gperftoools
 ifeq ($(BUILD),gperf)
-CXXFLAGS  = -O3 -fpermissive -fno-strict-aliasing -fPIC -Wall -Wno-long-long -pedantic -DNDEBUG -DUSE_GENESIS_PARSER  
+CXXFLAGS  = -O3 -fopenmp -fpermissive -fno-strict-aliasing -fPIC -Wall -Wno-long-long -pedantic -DNDEBUG -DUSE_GENESIS_PARSER  
 LDFLAGS += -lprofiler -ltcmalloc
 USE_GSL = 1
 endif

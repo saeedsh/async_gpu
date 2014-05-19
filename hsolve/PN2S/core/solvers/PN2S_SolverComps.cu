@@ -47,8 +47,6 @@ PN2S_SolverComps<T,arch>::~PN2S_SolverComps()
 //	if (_Rm_dev) cudaFree(_Rm_dev);
 }
 
-
-
 template <typename T, int arch>
 Error_PN2S PN2S_SolverComps<T,arch>::PrepareSolver(vector<PN2SModel<T,arch> > &network, PN2S_NetworkAnalyzer<T,arch> &analyzer)
 {
@@ -67,19 +65,22 @@ Error_PN2S PN2S_SolverComps<T,arch>::PrepareSolver(vector<PN2SModel<T,arch> > &n
 	_Em.AllocateMemory(vectorSize);
 	_Rm.AllocateMemory(vectorSize);
 
-	//Fill Vectors
-	//TODO: OpenMP
-	for(int i=0; i< vectorSize;i++ )
-	{
-		_Vm[i] = analyzer.allCompartments[i]->initVm;
-		_Cm[i] = analyzer.allCompartments[i]->Cm;
-		_Em[i] = analyzer.allCompartments[i]->Em;
-		_Rm[i] = analyzer.allCompartments[i]->Rm;
-	}
 
-	//making Hines Matrices
+	//TODO: OpenMP
+	int idx = 0;
 	for(int i=0; i< nModel;i++ )
 	{
+		for(int n=0; n< nComp;n++)
+		{
+			//Initialize values
+			uint gid = analyzer.allCompartments[idx]->gid;
+			_Vm[idx] = GetValue_Func(gid,INIT_VM_FIELD);
+			_Cm[idx] = GetValue_Func(gid,CM_FIELD);
+			_Em[idx] = GetValue_Func(gid,EM_FIELD);
+			_Rm[idx] = GetValue_Func(gid,RM_FIELD);
+			idx++;
+		}
+		//making Hines Matrices
 		makeHinesMatrix(&network[i], &_hm[i*modelSize]);
 //		_printMatrix_Column(nComp,nComp, &_hm[i*modelSize]);
 	}
@@ -186,8 +187,11 @@ void PN2S_SolverComps<T,arch>::makeHinesMatrix(PN2SModel<T,arch> *model, T * mat
 	vector< double > CmByDt(nComp);
 	vector< double > Ga(nComp);
 	for ( unsigned int i = 0; i < nComp; i++ ) {
-		CmByDt[i] = model->compts[ i ].Cm / ( _dt / 2.0 ) ;
-		Ga[i] =  2.0 / model->compts[ i ].Ra ;
+		T cm = GetValue_Func(model->compts[ i ].gid,CM_FIELD);
+		T ra = GetValue_Func(model->compts[ i ].gid,RA_FIELD);
+
+		CmByDt[i] = cm / ( _dt / 2.0 ) ;
+		Ga[i] =  2.0 / ra ;
 	}
 
 	/* Each entry in 'coupled' is a list of electrically coupled compartments.
@@ -203,7 +207,10 @@ void PN2S_SolverComps<T,arch>::makeHinesMatrix(PN2SModel<T,arch> *model, T * mat
 
 	// Setting diagonal elements
 	for ( unsigned int i = 0; i < nComp; i++ )
-		matrix[ i * nComp + i ] = (T)(CmByDt[ i ] + 1.0 / model->compts[ i ].Rm);
+	{
+		T rm = GetValue_Func(model->compts[ i ].gid,RM_FIELD);
+		matrix[ i * nComp + i ] = (T)(CmByDt[ i ] + 1.0 / rm);
+	}
 
 
 	double gi;
@@ -242,6 +249,9 @@ void PN2S_SolverComps<T,arch>::makeHinesMatrix(PN2SModel<T,arch> *model, T * mat
 		}
 	}
 }
+
+template <typename T, int arch>
+T (*PN2S_SolverComps<T,arch>::GetValue_Func) (uint id, PN2S_SolverComps<T,arch>::Fields field);
 
 
 template class PN2S_SolverComps<double, ARCH_SM30>;

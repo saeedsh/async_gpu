@@ -20,7 +20,7 @@ PN2S_ModelPack<T,arch>::~PN2S_ModelPack(){
 }
 
 template <typename T, int arch>
-Error_PN2S PN2S_ModelPack<T,arch>::PrepareSolver(vector<PN2SModel<T,arch> > &net){
+Error_PN2S PN2S_ModelPack<T,arch>::Reinit(vector<PN2SModel<T,arch> > &net){
 	Error_PN2S res = Error_PN2S::NO_ERROR;
 
 	_analyzer.ImportNetwork(net);
@@ -42,9 +42,14 @@ Error_PN2S PN2S_ModelPack<T,arch>::Process()
 }
 
 template <typename T, int arch>
-Error_PN2S PN2S_ModelPack<T,arch>::AddOutput()
+Error_PN2S PN2S_ModelPack<T,arch>::Output()
 {
+	return Error_PN2S::NO_ERROR;
+}
 
+template <typename T, int arch>
+Error_PN2S PN2S_ModelPack<T,arch>::Input()
+{
 	return Error_PN2S::NO_ERROR;
 }
 

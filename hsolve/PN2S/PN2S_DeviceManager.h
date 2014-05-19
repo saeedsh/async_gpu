@@ -20,7 +20,7 @@ class PN2S_DeviceManager
 public:
 	PN2S_DeviceManager();
 	virtual ~PN2S_DeviceManager();
-	Error_PN2S Setup(vector<PN2SModel<CURRENT_TYPE, CURRENT_ARCH> > &m, double dt);
+	Error_PN2S Reinit(vector<PN2SModel<CURRENT_TYPE, CURRENT_ARCH> > &m, double dt);
 	void Process();
 	vector<PN2S_Device> _devices; //TODO: Should be private
 private:

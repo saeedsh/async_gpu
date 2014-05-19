@@ -15,6 +15,7 @@
 #include "header.h" //Moose parts
 #include "HinesMatrix.h"
 
+
 class PN2S_Proxy
 {
 
@@ -28,7 +29,5 @@ private:
 	static void storeTree(vector<Id> &compartmentIds, vector< TreeNodeStruct >& tree);
 
 	static void zombify( Element* solver, Element* orig);
-
-	static map< unsigned int, Id > _objects;
 };
 #endif // !defined(EA_27150678_5056_4754_82F6_A77DCEB1BC1C__INCLUDED_)
