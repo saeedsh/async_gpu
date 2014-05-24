@@ -1,0 +1,3 @@
+[submodule "hsolve"]
+	path = hsolve
+	url = git@github.com:saeedsh/PN2S.git
