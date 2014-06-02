@@ -102,6 +102,7 @@ coverage.xml
 # Mr Developer
 .mr.developer.cfg
 .project
+.cproject
 .pydevproject
 
 # Rope
