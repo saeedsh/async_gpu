@@ -104,6 +104,7 @@ coverage.xml
 .project
 .cproject
 .pydevproject
+.settings
 
 # Rope
 .ropeproject
