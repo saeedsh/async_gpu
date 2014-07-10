@@ -90,7 +90,7 @@ USE_NUMPY=1
 # Debug mode:
 
 ifeq ($(BUILD),debug)
-CXXFLAGS = -g -O0 -fpermissive -fno-strict-aliasing -fPIC -fno-inline-functions -Wall -Wno-long-long -pedantic -DDO_UNIT_TESTS -DUSE_GENESIS_PARSER
+CXXFLAGS = -g -fpermissive -fno-strict-aliasing -fPIC -fno-inline-functions -Wall -Wno-long-long -pedantic -DDO_UNIT_TESTS -DUSE_GENESIS_PARSER
 USE_GSL = true
 endif
 # Optimized mode:
@@ -242,7 +242,7 @@ endif
 # ifeq ($(USE_CUDA),1)
 LIBS+= -L/usr/local/cuda/lib64 -lcuda -lcudart -lcublas -lm -lgomp -L./hsolve/PN2S/libs/tbb/lib/intel64/gcc4.4/ -ltbb  
 CXXFLAGS+= -I./hsolve/PN2S/libs/tbb/include
-CUDAFLAGS = -G -O0 -Xcompiler -fopenmp -Xcompiler -fPIC -g -gencode arch=compute_30,code=compute_30 -gencode arch=compute_30,code=sm_30 -x cu  -I./libs -I./libs/tbb/include
+CUDAFLAGS = -G -Xcompiler -fopenmp -Xcompiler -fPIC -g -gencode arch=compute_30,code=compute_30 -gencode arch=compute_30,code=sm_30 -x cu  -I./libs -I./libs/tbb/include
 # endif
 
 # To compile examples, pass EXAMPLES=true ( anything on the right will do) in make command line
