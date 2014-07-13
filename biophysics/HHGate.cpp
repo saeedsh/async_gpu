@@ -573,6 +573,8 @@ void HHGate::setupTables( const vector< double >& parms, bool doTau )
 	unsigned int i;
 
 	for( i = 0; i <= xdivs; i++ ) {
+		if(i == 600)
+			cout << i;
 		if ( fabs( parms[4] ) < SINGULARITY ) {
 			temp = 0.0;
 			A_[i] = temp;
