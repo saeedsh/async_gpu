@@ -43,8 +43,7 @@ GssaVoxelPools::GssaVoxelPools()
 	: 
 			VoxelPoolsBase(),
 			t_( 0.0 ),
-			atot_( 0.0 ),
-			volIndex_( 0 )
+			atot_( 0.0 )
 {;}
 
 GssaVoxelPools::~GssaVoxelPools()
@@ -73,8 +72,7 @@ void GssaVoxelPools::updateDependentRates(
 			i = deps.begin(); i != deps.end(); ++i ) {
 		atot_ -= v_[ *i ];
 		// atot_ += ( v[ *i ] = ( *rates_[ *i ] )( S() );
-		atot_ += ( v_[ *i ] = 
-						stoich->getReacVelocity( *i, S(), volIndex_ ) );
+		atot_ += ( v_[ *i ] = getReacVelocity( *i, S() ) );
 	}
 }
 
@@ -116,7 +114,7 @@ void GssaVoxelPools::advance( const ProcInfo* p, const GssaSystem* g )
 		if ( rindex >= g->stoich->getNumRates() ) {
 			// probably cumulative roundoff error here. 
 			// Recalculate atot to avoid, and redo.
-			g->stoich->updateReacVelocities( S(), v_, volIndex_ );
+			updateReacVelocities( g, S(), v_ );
 			atot_ = 0;
 			for ( vector< double >::const_iterator 
 					i = v_.begin(); i != v_.end(); ++i )
@@ -142,7 +140,6 @@ void GssaVoxelPools::reinit( const GssaSystem* g )
 {
 	VoxelPoolsBase::reinit(); // Assigns S = Sinit;
 	g->stoich->updateFuncs( varS(), 0 );
-	volIndex_ = g->stoich->indexOfMatchingVolume( getVolume() );
 
 	unsigned int numVarPools = g->stoich->getNumVarPools();
 	double* n = varS();
@@ -166,11 +163,89 @@ void GssaVoxelPools::reinit( const GssaSystem* g )
 	t_ = 0.0;
 	// vector< double > yprime( g->stoich->getNumAllPools(), 0.0 );
 				// i = yprime.begin(); i != yprime.end(); ++i )
-	g->stoich->updateReacVelocities( S(), v_, volIndex_ );
+	updateReacVelocities( g, S(), v_ );
 	atot_ = 0;
 	for ( vector< double >::const_iterator 
 		i = v_.begin(); i != v_.end(); ++i ) {
 		atot_ += *i;
 	}
 	atot_ *= SAFETY_FACTOR;
+}
+
+/////////////////////////////////////////////////////////////////////////
+// Rate computation functions
+/////////////////////////////////////////////////////////////////////////
+
+void GssaVoxelPools::updateAllRateTerms( const vector< RateTerm* >& rates,
+			   unsigned int numCoreRates )
+{
+	for ( unsigned int i = 0; i < rates_.size(); ++i )
+		delete( rates_[i] );
+	rates_.resize( rates.size() );
+
+	for ( unsigned int i = 0; i < numCoreRates; ++i )
+		rates_[i] = rates[i]->copyWithVolScaling( getVolume(), 1, 1 );
+	for ( unsigned int i = numCoreRates; i < rates.size(); ++i )
+		rates_[i] = rates[i]->copyWithVolScaling( getVolume(), 
+						getXreacScaleSubstrates(i - numCoreRates),
+						getXreacScaleProducts(i - numCoreRates ) );
+}
+
+void GssaVoxelPools::updateRateTerms( const vector< RateTerm* >& rates,
+			   unsigned int numCoreRates, unsigned int index 	)
+{
+	// During setup or expansion of the reac system, this might be called
+	// before the local rates_ term is assigned. If so, ignore.
+ 	if ( index >= rates_.size() )
+		return;
+	delete( rates_[index] );
+	if ( index >= numCoreRates )
+		rates_[index] = rates[index]->copyWithVolScaling(
+				getVolume(), 
+				getXreacScaleSubstrates(index - numCoreRates),
+				getXreacScaleProducts(index - numCoreRates ) );
+	else
+		rates_[index] = rates[index]->copyWithVolScaling(  
+				getVolume(), 1.0, 1.0 );
+}
+/**
+ * updateReacVelocities computes the velocity *v* of each reaction.
+ * This is a utility function for programs like SteadyState that need
+ * to analyze velocity.
+ */
+void GssaVoxelPools::updateReacVelocities( const GssaSystem* g, 
+			const double* s, vector< double >& v ) const
+{
+	const KinSparseMatrix& N = g->stoich->getStoichiometryMatrix();
+	assert( N.nColumns() == rates_.size() );
+
+	vector< RateTerm* >::const_iterator i;
+	v.clear();
+	v.resize( rates_.size(), 0.0 );
+	vector< double >::iterator j = v.begin();
+
+	for ( i = rates_.begin(); i != rates_.end(); i++) {
+		*j++ = (**i)( s );
+		assert( !isnan( *( j-1 ) ) );
+	}
+}
+
+double GssaVoxelPools::getReacVelocity( 
+				unsigned int r, const double* s ) const
+{
+	return rates_[r]->operator()( s );
+}
+
+void GssaVoxelPools::setStoich( const Stoich* stoichPtr )
+{
+	stoichPtr_ = stoichPtr;
+}
+
+// Handle volume updates. Inherited virtual func.
+void GssaVoxelPools::setVolumeAndDependencies( double vol )
+{
+	VoxelPoolsBase::setVolumeAndDependencies( vol );
+	stoichPtr_->setupCrossSolverReacVols();
+	updateAllRateTerms( stoichPtr_->getRateTerms(),
+		stoichPtr_->getNumCoreRates() );
 }

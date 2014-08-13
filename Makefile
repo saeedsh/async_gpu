@@ -245,6 +245,11 @@ CXXFLAGS+= -I./hsolve/PN2S/libs/tbb/include
 CUDAFLAGS = -G -O0 -Xcompiler -fopenmp -Xcompiler -fPIC -g -gencode arch=compute_35,code=compute_35 -gencode arch=compute_30,code=compute_30 -x cu  -I./libs -I./libs/tbb/include
 # endif
 
+# To disable numpy pass USE_NUMPY=0
+ifeq ($(USE_NUMPY),1)
+CXXFLAGS+=-DUSE_NUMPY
+endif
+
 # To compile examples, pass EXAMPLES=true ( anything on the right will do) in make command line
 ifdef EXAMPLES
 EXAMPLES_DIR = examples

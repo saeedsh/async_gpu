@@ -136,6 +136,7 @@ def makeNeuroMeshModel():
 
 	# set up adaptors
 	aCa = moose.Adaptor( '/model/chem/psd/adaptCa', pdc )
+
 	adaptCa = moose.vec( '/model/chem/psd/adaptCa' )
 	chemCa = moose.vec( '/model/chem/psd/Ca' )
 	print 'aCa = ', aCa, ' foo = ', foo, "len( ChemCa ) = ", len( chemCa ), ", numData = ", chemCa.numData
@@ -273,7 +274,7 @@ def testNeuroMeshMultiscale():
         plt.ylabel( 'Conc (mM)' )
         plt.xlabel( 'time (seconds)' )
         for x in moose.wildcardFind( '/graphs/chem/#[ISA=Table]' ):
-            pos = numpy.arange( 0, x.vector.size, 1 )
+            pos = numpy.arange( 0, len(x.vector), 1 )
             line1, = chem.plot( pos, x.vector, label=x.name )
         plt.legend()
 
@@ -281,7 +282,7 @@ def testNeuroMeshMultiscale():
         plt.ylabel( 'Vm (V)' )
         plt.xlabel( 'time (seconds)' )
         for x in moose.wildcardFind( '/graphs/elec/#[ISA=Table]' ):
-            pos = numpy.arange( 0, x.vector.size, 1 )
+            pos = numpy.arange( 0, len(x.vector), 1 )
             line1, = elec.plot( pos, x.vector, label=x.name )
         plt.legend()
 

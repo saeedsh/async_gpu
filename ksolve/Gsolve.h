@@ -49,6 +49,13 @@ class Gsolve: public ZombiePoolInterface
 		void process( const Eref& e, ProcPtr p );
 		void reinit( const Eref& e, ProcPtr p );
 
+		/**
+		 * Handles request to change volumes of voxels in this Ksolve, and
+		 * all cascading effects of this. At this point it won't handle
+		 * change in size of voxel array.
+		 */
+		void updateVoxelVol( vector< double > vols );
+
 		//////////////////////////////////////////////////////////////////
 		// Solver setup functions
 		//////////////////////////////////////////////////////////////////
@@ -85,7 +92,17 @@ class Gsolve: public ZombiePoolInterface
 
 		void getBlock( vector< double >& values ) const;
 		void setBlock( const vector< double >& values );
+		void setupCrossSolverReacs( const map< Id, vector< Id > >& xr,
+	   		Id otherStoich );
+		void setupCrossSolverReacVols( 
+			const vector< vector< Id > >& subCompts, 
+			const vector< vector< Id > >& prdCompts );
 
+		/**
+		 * Rescale specified voxel rate term following rate constant change 
+		 * or volume change. If index == ~0U then does all terms.
+		 */
+		void updateRateTerms( unsigned int index );
 		//////////////////////////////////////////////////////////////////
 		/// Flag: returns true if randomized round to integers is done.
 		bool getRandInit() const;

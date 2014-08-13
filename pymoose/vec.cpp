@@ -80,7 +80,7 @@ extern "C" {
     // Python method lists for PyObject of Id
     ///////////////////////////////////////////////
     PyDoc_STRVAR(moose_Id_delete_doc,
-                 "vec.delete()"
+                 "vec.delete() -> None"
                  "\n"
                  "\nDelete the underlying moose object. This will invalidate all"
                  "\nreferences to this object and any attempt to access it will raise a"
@@ -88,19 +88,21 @@ extern "C" {
                  "\n");
 
     PyDoc_STRVAR(moose_Id_setField_doc,
-                 "setField(fieldname, value_vector)\n"
+                 "setField(fieldname, value_vector) -> None\n"
                  "\n"
                  "Set the value of `fieldname` in all elements under this vec.\n"
                  "\n"
                  "Parameters\n"
                  "----------\n"
                  "fieldname: str\n"
-                 "\tfield to be set.\n"
+                 "    field to be set.\n"
                  "value: sequence of values\n"
-                 "\tsequence of values corresponding to individual elements under this\n"
-                 "vec.\n"
+                 "    sequence of values corresponding to individual elements under this\n"
+                 "    vec.\n"
                  "\n"
-                 "NOTE: This is an interface to SetGet::setVec\n"
+                 "Notes\n"
+                 "-----\n"
+                 "    This is an interface to SetGet::setVec\n"
                  );
     
     static PyMethodDef IdMethods[] = {
@@ -159,41 +161,42 @@ extern "C" {
                  "\nThere are two ways an vec can be initialized, (1) create a new array"
                  "\nelement or (2) create a reference to an existing object."
                  "\n"
-                 "\n__init__(self, path=path, n=size, g=isGlobal, dtype=className)"
                  "\n"
-                 "\nParameters"
-                 "\n----------"                 
-                 "\npath : str "
-                 "\nPath of an existing array element or for creating a new one. This has"
-                 "\nthe same format as unix file path: /{element1}/{element2} ... If there"
-                 "\nis no object with the specified path, moose attempts to create a new"
-                 "\narray element. For that to succeed everything until the last `/`"
-                 "\ncharacter must exist or an error is raised"
-                 "\n"
-                 "\nn : positive int"
-                 "\nThis is a positive integers specifying the size of the array element"
-                 "\nto be created. Thus n=2 will create an"
-                 "\nvec with 2 elements."
-                 "\n"
-                 "\n"
-                 "\ng : int"
-                 "\nSpecify if this is a global or local element. Global elements are"
-                 "\nshared between nodes in a computing cluster."
-                 "\n"
-                 "\ndtype: string"
-                 "\nThe vector will be of this moose-class."
-                 "\n"
-                 "\n"
-                 "\n__init__(self, id)"
-                 "\n"
-                 "\nCreate a reference to an existing array object."
-                 "\n"
-                 "\nParameters"
-                 "\n----------"
-                 "\nid : vec/int"
-                 "\nvec of an existing array object. The new object will be another"
-                 "\nreference to this object."
-                 "\n"
+                 "\n    __init__(self, path=path, n=size, g=isGlobal, dtype=className)"
+                 "\n    "
+                 "\n    Parameters"
+                 "\n    ----------"                 
+                 "\n    path : str "
+                 "\n        Path of an existing array element or for creating a new one. This has"
+                 "\n        the same format as unix file path: /{element1}/{element2} ... If there"
+                 "\n        is no object with the specified path, moose attempts to create a new"
+                 "\n        array element. For that to succeed everything until the last `/`"
+                 "\n        character must exist or an error is raised"
+                 "\n    "
+                 "\n    n : positive int"
+                 "\n        This is a positive integers specifying the size of the array element"
+                 "\n        to be created. Thus n=2 will create an"
+                 "\n        vec with 2 elements."
+                 "\n    "
+                 "\n    "
+                 "\n    g : int"
+                 "\n        Specify if this is a global or local element. Global elements are"
+                 "\n        shared between nodes in a computing cluster."
+                 "\n    "
+                 "\n    dtype: string"
+                 "\n        The vector will be of this moose-class."
+                 "\n    "
+                 "\n    "
+                 "\n    __init__(self, id)"
+                 "\n    "
+                 "\n        Create a reference to an existing array object."
+                 "\n    "
+                 "\n    Parameters"
+                 "\n    ----------"
+                 "\n    id : vec/int"
+                 "\n        vec of an existing array object. The new object will be another"
+                 "\n        reference to this object."
+                 "\n    "
                  );
     
     PyTypeObject IdType = { 
@@ -381,7 +384,7 @@ extern "C" {
             size_t length = trimmed_path.length();
             if (length <= 0){
                 PyErr_SetString(PyExc_ValueError,
-                                "path must be non-empty string.");
+                                "moose_Id_init: path must be non-empty string.");
                 Py_DECREF(self);
                 return -1;
             }
@@ -462,7 +465,7 @@ extern "C" {
             ObjId el(id, ii);
 #ifndef NDEBUG
             if (verbosity > 1){
-                cout << "\tDeleting ObjId " << el << endl;
+                cout << "    Deleting ObjId " << el << endl;
             }
 #endif
             for (unsigned int fidx = 0; fidx < lookupFields.size(); ++fidx){
@@ -497,7 +500,7 @@ extern "C" {
     PyObject * moose_Id_delete(_Id * self)
     {
         if (self->id_ == Id()){
-            PyErr_SetString(PyExc_ValueError, "Cannot delete moose shell.");
+            PyErr_SetString(PyExc_ValueError, "moose_Id_delete: cannot delete moose shell.");
             return NULL;
         }
         if (!Id::isValid(self->id_)){
@@ -604,7 +607,7 @@ extern "C" {
             index += moose_Id_getLength(self);
         }
         if ((index < 0) || (index >= moose_Id_getLength(self))){
-            PyErr_SetString(PyExc_IndexError, "Index out of bounds.");
+            PyErr_SetString(PyExc_IndexError, "index out of bounds.");
             return NULL;
         }
         ObjId oid(self->id_.path()); // This is just to get the dataIndex of parent
@@ -645,8 +648,7 @@ extern "C" {
                 PyObject * value = oid_to_element(ObjId(self->id_, oid.dataIndex, ii));
                 if (PyTuple_SetItem(ret, (Py_ssize_t)(ii-start), value)){
                     Py_XDECREF(ret);
-                    Py_XDECREF(value);
-                    PyErr_SetString(PyExc_RuntimeError, "Could assign tuple entry.");
+                    PyErr_SetString(PyExc_RuntimeError, "moose_Id_getSlice: could not assign tuple entry.");
                     return NULL;
                 }
             }
@@ -655,8 +657,7 @@ extern "C" {
                 PyObject * value = oid_to_element(ObjId(self->id_, ii));
                 if (PyTuple_SetItem(ret, (Py_ssize_t)(ii-start), value)){
                     Py_XDECREF(ret);
-                    Py_XDECREF(value);
-                    PyErr_SetString(PyExc_RuntimeError, "Could assign tuple entry.");
+                    PyErr_SetString(PyExc_RuntimeError, "moose_Id_getSlice: could not assign tuple entry.");
                     return NULL;
                 }
             }
@@ -673,7 +674,7 @@ extern "C" {
             Py_ssize_t value = PyInt_AsLong(op);
             return moose_Id_getItem(self, value);
         } else {
-            PyErr_SetString(PyExc_KeyError, "invalid index.");
+            PyErr_SetString(PyExc_KeyError, "moose_Id_subscript: invalid index.");
             return NULL;
         }
     }
@@ -824,20 +825,25 @@ extern "C" {
                 break;
             }
             case 'z': {
-                PyErr_SetString(PyExc_NotImplementedError, "DataId handling not implemented yet.");
+                PyErr_SetString(PyExc_NotImplementedError,
+                                "moose_Id_getattro: DataId handling not implemented yet.");
                 _ret = NULL;
                 break;
             }
             default:
-                PyErr_SetString(PyExc_ValueError, "unhandled field type.");
-                _ret = NULL;                
+                ostringstream msg;
+                msg << "moose_Id_getattro: unhandled field type '" << type << "'\n"
+                    << "This is a vec object. Perhaps you are trying to access the field in an"
+                    << " element in this. Then use indexing to get the element first.";
+                PyErr_SetString(PyExc_ValueError, msg.str().c_str());
+                _ret = NULL;
                 break;
         }
         if (new_attr){
             Py_DECREF(attr);
         }
         return _ret;
-    }
+     }
     
      PyObject * moose_Id_setField(_Id * self, PyObject * args)
     {
@@ -865,7 +871,7 @@ extern "C" {
         if (PyString_Check(attr)){
             fieldname = PyString_AsString(attr);
         } else {
-            PyErr_SetString(PyExc_TypeError, "Attribute name must be a string");
+            PyErr_SetString(PyExc_TypeError, "moose_Id_setattro: Attribute name must be a string");
             return -1;
         }
         string moose_class = Field<string>::get(self->id_, "className");
@@ -884,7 +890,7 @@ extern "C" {
                 return ret;
             }
             ostringstream msg;
-            msg << "'" << moose_class << "' class has no field '" << fieldname << "'" << endl;
+            msg << "moose_Id_setattro: '" << moose_class << "' class has no field '" << fieldname << "'" << endl;
             PyErr_SetString(PyExc_AttributeError, msg.str().c_str());
             return -1;
         }
@@ -894,7 +900,8 @@ extern "C" {
         if (!PySequence_Check(value)){
             is_seq = false;
         } else if (length != PySequence_Length(value)){
-            PyErr_SetString(PyExc_IndexError, "Length of the sequence on the right hand side does not match Id size.");
+            PyErr_SetString(PyExc_IndexError,
+                            "moose_Id_setattro: length of the sequence on the right hand side does not match Id size.");
             return -1;
         }
         switch(ftype){
@@ -1021,7 +1028,7 @@ extern "C" {
                             _value.push_back(v[0]);
                         } else {
                             ostringstream err;
-                            err << ii << "-th element is NUL";
+                            err << "moose_Id_setattro:" << ii << "-th element is NUL";
                             PyErr_SetString(PyExc_ValueError, err.str().c_str());
                             return -1;
                         }
@@ -1031,7 +1038,7 @@ extern "C" {
                     if (v && v[0]){
                         _value.assign(length, v[0]);
                     } else {
-                        PyErr_SetString(PyExc_ValueError,  "value is an empty string");
+                        PyErr_SetString(PyExc_ValueError,  "moose_Id_setattro: value is an empty string");
                         return -1;
                     }
                 }                    

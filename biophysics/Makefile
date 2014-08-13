@@ -19,13 +19,16 @@ OBJ = \
 	CompartmentBase.o	\
 	Compartment.o	\
 	SymCompartment.o	\
+	GapJunction.o	\
 	ChanBase.o	\
 	HHChannel.o	\
 	HHGate.o	\
 	HHGate2D.o	\
 	HHChannel2D.o	\
+	CaConcBase.o	\
 	CaConc.o	\
 	MgBlock.o	\
+	Nernst.o	\
 	Neuron.o	\
 	ReadCell.o	\
 	SynChanBase.o	\
@@ -70,12 +73,15 @@ Compartment.o: CompartmentBase.h Compartment.h
 SymCompartment.o: CompartmentBase.h Compartment.h SymCompartment.h
 ChanBase.o: ChanBase.h
 Leakage.o: Leakage.h ChanBase.h
+GapJunction.o: GapJunction.h
 HHChannel.o: ChanBase.h HHChannel.h HHGate.h
 HHGate.o: HHGate.h
 HHChannel2D.o: ChanBase.h HHChannel2D.h HHGate2D.h
 HHGate2D.o: HHGate2D.h
-CaConc.o:	CaConc.h
+CaConcBase.o:	CaConcBase.h
+CaConc.o:	CaConcBase.h CaConc.h
 MgBlock.o:	MgBlock.h ChanBase.h
+Nernst.o:	Nernst.h
 Neuron.o:	Neuron.h
 ReadCell.o: CompartmentBase.h Compartment.h SymCompartment.h ReadCell.h ../shell/Shell.h ../utility/utility.h
 IzhikevichNrn.o: IzhikevichNrn.h

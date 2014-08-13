@@ -107,12 +107,6 @@ class Stoich
 		Id getCompartment() const;
 
 		/**
-		 * This does a quick and dirty estimate of the timestep suitable 
-		 * for this sytem
-		 */
-		double getEstimatedDt() const;
-
-		/**
 		 * Utility function to return # of rates_ entries. This includes
 		 * the cross-solver reactions.
 		 */
@@ -127,6 +121,9 @@ class Stoich
 		/// Utility function to return a rates_ entry
 		const RateTerm* rates( unsigned int i ) const;
 
+		/// Returns a reference to the entire rates_ vector.
+		const vector< RateTerm* >& getRateTerms() const;
+
 		unsigned int getNumFuncs() const;
 		const FuncTerm* funcs( unsigned int i ) const;
 
@@ -134,6 +131,7 @@ class Stoich
 		vector< unsigned int > getColIndex() const;
 		vector< unsigned int > getRowStart() const;
 
+		vector< Id > getProxyPools( Id i ) const;
 		//////////////////////////////////////////////////////////////////
 		// Model traversal and building functions
 		//////////////////////////////////////////////////////////////////
@@ -142,9 +140,6 @@ class Stoich
 		 * elist of all elements managed by this solver.
 		 */
 		void setElist( const Eref& e, const vector< ObjId >& elist );
-
-		/// Builds new RateTerm vectors scaled to all the unique volumes.
-		void buildAllRateTermVectors();
 
 		/**
 		 * Scans through elist to find any reactions that connect to
@@ -180,6 +175,28 @@ class Stoich
 		 * in mol number or concentration.
 		 */
 		void convertRatesToStochasticForm();
+
+		/**
+		 * Builds cross-reaction terms between current stoich and 
+		 * otherStoich. The function scans the voxels at which there
+		 * are jucntions between different compartments, and orchestrates
+		 * setup of interfaces between the Ksolves that implement the
+		 * cross-reactions at these junctions.
+		 */
+		void buildXreacs( const Eref& e, Id otherStoich );
+
+		/**
+		 * Expands out list of compartment mappings of proxy reactions to
+		 * the appropriate entries on the rates_vector.
+		 */
+		void comptsOnCrossReacTerms( vector< pair< Id, Id > >& xr ) const;
+
+		/**
+		 * Used to set up and update all cross solver reac terms and
+		 * their rates, if there has been a change in volumes. Should
+		 * also work if there has been a change in voxelization.
+		 */
+		void setupCrossSolverReacVols() const;
 		//////////////////////////////////////////////////////////////////
 		// Zombification functions.
 		//////////////////////////////////////////////////////////////////
@@ -210,18 +227,20 @@ class Stoich
 
 		/*
 		 * This takes the specified Reac and its substrate and product
-		 * list, and installs them into the Stoich. This is the high-level
-		 * interface function.
+		 * list, and installs them into the Stoich. It also builds up the
+		 * vectors to store which compartment each substrate/product 
+		 * belongs to, needed for cross-reaction computations.
+		 * This is the high-level interface function.
 		 */
 		void installReaction( Id reacId,
 				const vector< Id >& subs, const vector< Id >& prds );
 		/*
-		 * This takes the specified forward and reverse half-reacs belonging
+		 * This takes the specified subs and prds belonging
 		 * to the specified Reac, and builds them into the Stoich.
 		 * It is a low-level function used internally.
 		 */
-		void installReaction( Id reacId, 
-				ZeroOrder* forward, ZeroOrder* reverse );
+		unsigned int innerInstallReaction( Id reacId, 
+				const vector< Id >& subs, const vector< Id >& prds );
 
 		/**
 		 * This takes the baseclass for an MMEnzyme and builds the
@@ -370,9 +389,10 @@ class Stoich
 		 * Updates the yprime array, rate of change of each molecule
 		 * The volIndex specifies which set of rates to use, since the
 		 * rates are volume dependent.
-		 */
+		 * Moved to VoxelPools
 		void updateRates( const double* s, double* yprime,
 					   unsigned int volIndex ) const;
+		 */
 		
 		/**
 		 * Computes the velocity of each reaction, vel.
@@ -386,15 +406,17 @@ class Stoich
 		void updateFuncs( double* s, double t ) const;
 
 		/// Updates the rates for cross-compartment reactions.
+		/*
 		void updateJunctionRates( const double* s,
 			   const vector< unsigned int >& reacTerms, double* yprime );
+			   */
 
 		/** 
 		 * Get the rate for a single reaction specified by r, as per all 
 		 * the mol numbers in s.
-		 */
 		double getReacVelocity( unsigned int r, const double* s,
 					   unsigned int volIndex ) const;
+		 */
 
 		/// Returns the stoich matrix. Used by gsolve.
 		const KinSparseMatrix& getStoichiometryMatrix() const;
@@ -418,8 +440,8 @@ class Stoich
 		/**
 		 * Returns the index of the matching volume,
 		 * which is also the index into the RateTerm vector.
-		 */
 		unsigned int indexOfMatchingVolume( double vol ) const;
+		 */
 		
 		//////////////////////////////////////////////////////////////////
 		static const unsigned int PoolIsNotOnSolver;
@@ -452,8 +474,18 @@ class Stoich
 		 */
 		vector< unsigned int > species_;
 
-		/// The RateTerms handle the update operations for reaction rate v_
-		vector< vector< RateTerm* > > rates_;
+		/**
+		 * The RateTerms handle the update operations for reaction rate v_.
+		 * This is the master vector of RateTerms, and it is scaled to
+		 * a volume such that the 'n' units and the conc units are
+		 * identical.
+		 * Duplicates of this vector are made in each voxel with a different
+		 * volume. The duplicates have rates scaled as per volume.
+		 * The RateTerms vector also includes reactions that have 
+		 * off-compartment products. These need special volume scaling 
+		 * involving all the interactiong compartments.
+		 */
+		vector< RateTerm* > rates_;
 
 		/**
 		 * This tracks the unique volumes handled by the reac system.
@@ -507,12 +539,21 @@ class Stoich
 		 */
 		vector< Id > mmEnzMap_;
 		
+
 		/**
-		 * Number of variable molecules that the solver deals with.
+		 * Number of variable molecules that the solver deals with,
+		 * that are local to the solver.
 		 *
 		 */
 		unsigned int numVarPools_;
-		unsigned int numVarPoolsBytes_;
+
+		/**
+		 * Number of variable molecules that the solver deals with,
+		 * including the proxy molecules which belong in other compartments.
+		 *
+		unsigned int totVarPools_;
+		 */
+
 		/**
 		 * Number of buffered molecules
 		 */
@@ -561,6 +602,19 @@ class Stoich
 		 */
 		vector< pair< Id, Id > > offSolverReacCompts_;
 
+		/**
+		 * subComptVec_[rateTermIndex][substrate#]: Identifies compts
+		 * for each substrate for each cross-compartment RateTerm in 
+		 * the rates_vector.
+		 */
+		vector< vector< Id > > subComptVec_;
+
+		/**
+		 * prdComptVec_[rateTermIndex][product#]: Identifies compts
+		 * for each product for each cross-compartment RateTerm in 
+		 * the rates_vector.
+		 */
+		vector< vector< Id > > prdComptVec_;
 };
 
 #endif	// _STOICH_H

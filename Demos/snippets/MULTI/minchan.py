@@ -140,6 +140,9 @@ def makeNeuroMeshModel():
         print 'PSD: numfoo = ', foo.numData
         print 'PSD: numAllVoxels = ', pmksolve.numAllVoxels
 
+        # Put in junctions between the diffusion solvers
+        nmdsolve.buildNeuroMeshJunctions( smdsolve, pmdsolve )
+
 	"""
 	CaNpsd = moose.vec( '/model/chem/psdMesh/PSD/PP1_PSD/CaN' )
 	print 'numCaN in PSD = ', CaNpsd.nInit, ', vol = ', CaNpsd.volume
@@ -156,6 +159,10 @@ def makeNeuroMeshModel():
 	assert( len( chemCa ) == ndc )
 	path = '/model/elec/soma/Ca_conc'
 	elecCa = moose.element( path )
+        print "=========="
+        print elecCa
+        print adaptCa
+        print chemCa
 	moose.connect( elecCa, 'concOut', adaptCa[0], 'input', 'Single' )
 	moose.connect( adaptCa, 'output', chemCa, 'setConc', 'OneToOne' )
 	adaptCa.inputOffset = 0.0	# 
@@ -312,6 +319,7 @@ def testNeuroMeshMultiscale():
         pylab.show()
         '''
 
+        pylab.show()
 	print 'All done'
 
 

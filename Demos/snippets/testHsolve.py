@@ -217,7 +217,7 @@ def dump_plots( fname ):
     if ( os.path.exists( fname ) ):
         os.remove( fname )
     for x in moose.wildcardFind( '/graphs/##[ISA=Table]' ):
-        t = numpy.arange( 0, len(x.vector), 1 )
+        t = numpy.arange( 0, x.vector.size, 1 )
         pylab.plot( t, x.vector, label=x.name )
     pylab.legend()
     pylab.show()
@@ -227,7 +227,6 @@ def make_spiny_compt():
     comptLength = 100e-6
     comptDia = 4e-6
     numSpines = 5
-
     compt = create_squid()
     compt.inject = 1e-7
     compt.x0 = 0

@@ -16,11 +16,13 @@ OBJ = \
 	Func.o \
 	TableBase.o	\
 	Table.o	\
+	Interpol.o	\
 	StimulusTable.o	\
 	TimeTable.o	\
 	Stats.o	\
 	Interpol2D.o \
 	HDF5WriterBase.o	\
+	HDF5DataWriter.o	\
 	Variable.o	\
 	testBuiltins.o	\
 
@@ -37,11 +39,13 @@ Mstring.o:		Mstring.h
 Func.o:	Func.h
 TableBase.o:		TableBase.h
 Table.o:		TableBase.h Table.h
+Interpol.o:		TableBase.h Interpol.h
 StimulusTable.o:		TableBase.h StimulusTable.h
 TimeTable.o:	TimeTable.h TableBase.h
 Stats.o:	Stats.h
 Interpol2D.o:	Interpol2D.h
 HDF5WriterBase.o: HDF5WriterBase.h
+HDF5DataWriter.o: HDF5DataWriter.h HDF5WriterBase.h
 Variable.o: Variable.h
 testBuiltins.o:	Group.h Arith.h Stats.h ../msg/DiagonalMsg.h ../basecode/SetGet.h
 

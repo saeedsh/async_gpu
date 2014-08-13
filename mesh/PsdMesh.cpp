@@ -174,8 +174,10 @@ void PsdMesh::handlePsdList(
 			x += 3;
 			psd_.back().setDia( *x++ );
 			psd_.back().setIsCylinder( true );
-			psd_.back().setLength( *x ); // This is an entirely nominal
-						// length, so that the effective vol != 0.
+				// This is an entirely nominal
+				// length, so that the effective vol != 0.
+			psd_.back().setLength( thickness_ ); 
+
 			parentDist_.push_back( *x++ );
 			vs_[i] = psd_.back().volume( psd_.back() );
 			area_[i] = psd_.back().getDiffusionArea( psd_.back(), 0 );
@@ -402,6 +404,8 @@ void PsdMesh::matchSpineMeshEntries( const ChemCompt* other,
 		for ( unsigned int i = 0; i < psd_.size(); ++i ) {
 			double xda = psd_[i].getDiffusionArea( pa_[i], 0 ) / parentDist_[i];
 			ret.push_back( VoxelJunction( i, parent_[i], xda ) );
+			ret.back().firstVol = getMeshEntryVolume( i );
+			ret.back().secondVol = sm->getMeshEntryVolume( parent_[i] );
 		}
 	} else {
 		assert( 0 ); // Don't know how to do this yet.

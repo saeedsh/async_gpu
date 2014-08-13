@@ -271,33 +271,28 @@ class ChannelML():
                     v += dv_here
 
                 ## Presently HHGate2D doesn't allow the setting of tables as 2D vectors directly
-                #moosegate.tableA = tableA
-                #moosegate.tableB = tableB
+                moosegate.tableA = tableA
+                moosegate.tableB = tableB
 
-                ## Instead, I wrap the interpol2D objects inside HHGate2D and set the tables
-                moosegate_tableA = moose.Interpol2D(moosegate.path+'/tableA')
                 ## set SI values inside MOOSE
-                moosegate_tableA.xmin = VMIN_here*Vfactor
-                moosegate_tableA.xmax = VMAX_here*Vfactor
-                moosegate_tableA.xdivs = NDIVS_here
-                #moosegate_tableA.dx = dv_here*Vfactor
-                moosegate_tableA.ymin = CaMIN*concfactor
-                moosegate_tableA.ymax = CaMAX*concfactor
-                moosegate_tableA.ydivs = CaNDIVS
-                #moosegate_tableA.dy = dCa*concfactor
-                moosegate_tableA.tableVector2D = tableA
+                moosegate.xminA = VMIN_here*Vfactor
+                moosegate.xmaxA = VMAX_here*Vfactor
+                moosegate.xdivsA = NDIVS_here
+                #moosegate.dxA = dv_here*Vfactor
+                moosegate.yminA = CaMIN*concfactor
+                moosegate.ymaxA = CaMAX*concfactor
+                moosegate.ydivsA = CaNDIVS
+                #moosegate.dyB = dCa*concfactor
 
-                moosegate_tableB = moose.Interpol2D(moosegate.path+'/tableB')
                 ## set SI values inside MOOSE
-                moosegate_tableB.xmin = VMIN_here*Vfactor
-                moosegate_tableB.xmax = VMAX_here*Vfactor
-                moosegate_tableB.xdivs = NDIVS_here
-                #moosegate_tableB.dx = dv_here*Vfactor
-                moosegate_tableB.ymin = CaMIN*concfactor
-                moosegate_tableB.ymax = CaMAX*concfactor
-                moosegate_tableB.ydivs = CaNDIVS
-                #moosegate_tableB.dy = dCa*concfactor
-                moosegate_tableB.tableVector2D = tableB
+                moosegate.xminB = VMIN_here*Vfactor
+                moosegate.xmaxB = VMAX_here*Vfactor
+                moosegate.xdivsB = NDIVS_here
+                #moosegate.dxB = dv_here*Vfactor
+                moosegate.yminB = CaMIN*concfactor
+                moosegate.ymaxB = CaMAX*concfactor
+                moosegate.ydivsB = CaNDIVS
+                #moosegate.dyB = dCa*concfactor
 
     def setQ10(self,q10settings):
         if 'q10_factor' in q10settings.attrib.keys():

@@ -171,7 +171,11 @@ class NetworkML():
                 
     def translate_rotate(self,obj,x,y,z,ztheta): # recursively translate all compartments under obj
         for childId in obj.children:
-            childobj = moose.Neutral(childId)
+            try:
+                childobj = moose.element(childId)
+            except TypeError:  # in async13, gates which have not been created still 'exist'
+                                # i.e. show up as a child, but cannot be wrapped.
+                pass
             ## if childobj is a compartment or symcompartment translate, else skip it
             if childobj.className in ['Compartment','SymCompartment']:
                 ## SymCompartment inherits from Compartment,
@@ -287,16 +291,10 @@ class NetworkML():
             syn_name_full = syn_name+'_'+utils.underscorize(pre_path)
             self.make_new_synapse(syn_name, postcomp, syn_name_full)
         else:
-            ##### BUG BUG BUG in MOOSE:
-            ##### Subhasis said addSpike below always adds to the first element in syn.synapse
-            ##### So here, create a new SynChan everytime.
-            syn_name_full = syn_name+'_'+utils.underscorize(pre_path)
-            self.make_new_synapse(syn_name, postcomp, syn_name_full)
-            ##### Once above bug is resolved in MOOSE, revert to below: 
-            ### if syn doesn't exist in this compartment, create it
-            #syn_name_full = syn_name
-            #if not moose.exists(post_path+'/'+syn_name_full):
-            #    self.make_new_synapse(syn_name, postcomp, syn_name_full)
+            ## if syn doesn't exist in this compartment, create it
+            syn_name_full = syn_name
+            if not moose.exists(post_path+'/'+syn_name_full):
+                self.make_new_synapse(syn_name, postcomp, syn_name_full)
         ## moose.element is a function that checks if path exists,
         ## and returns the correct object, here SynChan
         syn = moose.element(post_path+'/'+syn_name_full) # wrap the synapse in this compartment
@@ -305,14 +303,21 @@ class NetworkML():
         gradedchild = utils.get_child_Mstring(syn,'graded')
         #### weights are set at the end according to whether the synapse is graded or event-based
 
-
         #### connect pre-comp Vm (if graded) OR spikegen/timetable (if event-based) to the synapse
         ## I rely on second term below not being evaluated if first term is None; else None.value gives error.
         if gradedchild is not None and gradedchild.value=='True': # graded synapse
-            table = moose.Table(syn.path+"/graded_table")
+            interpol = moose.element(syn.path+"/graded_table")
             #### always connect source to input - else 'cannot create message' error.
             precomp = moose.Compartment(pre_path)
-            moose.connect(precomp,"VmOut",table,"msgInput")
+            moose.connect(precomp,"VmOut",interpol,"input")
+            try:
+                tau_table = moose.element(syn.path+'/tau_table')
+                tau_table_present = True
+            except ValueError:
+                tau_table_present = False
+            # if tau_table is not found, don't connect it
+            if tau_table_present:
+                moose.connect(precomp,'VmOut',tau_table,'input')
             ## since there is no weight field for a graded synapse
             ## (no 'synapse' message connected),
             ## I set the Gbar to weight*Gbar
@@ -320,7 +325,9 @@ class NetworkML():
         else: # Event based synapse
             ## synapse could be connected to spikegen at pre-compartment OR a file!
             if 'file' not in pre_path:
-                precomp = moose.Compartment(pre_path)
+                ## element() can return either Compartment() or IzhikevichNrn(),
+                ## since it queries and wraps the actual object
+                precomp = moose.element(pre_path)
                 ## if spikegen for this synapse doesn't exist in this compartment, create it
                 ## spikegens for different synapse_types can have different thresholds
                 ## but an integrate and fire spikegen supercedes all other spikegens
@@ -349,17 +356,10 @@ class NetworkML():
                 ## above works, but below gives me an error sayin getNum_synapse not found
                 ## but both work in Demos/snippets/lifcomp.py
                 #syn.synapse.num += 1
-                #m = moose.connect(spikegen, 'spikeOut',
-                #                    syn.synapse.vec[-1], 'addSpike', 'Single')
+                ## see Demos/snippets/synapse.py for an example of 
+                ## how to connect multiple SpikeGens to the same SynChan
                 m = moose.connect(spikegen, 'spikeOut',
-                                    syn.synapse.vec, 'addSpike', 'Sparse')
-                ## if setting "Sparse" connections above, use below to set 1 synapse
-                m.setRandomConnectivity(1.0, 1) # (conn prob, num of connections)
-                ## obsolete -- buildq branch
-                ##### BUG BUG BUG in MOOSE:
-                ##### Subhasis said addSpike always adds to the first element in syn.synapse
-                ##### Create a new synapse above everytime
-                #moose.connect(spikegen,"event",syn.synapse[-1],"addSpike")
+                                    syn.synapse[-1], 'addSpike', 'Single')
             else:
                 # if connected to a file, create a timetable,
                 # put in a field specifying the connected filenumbers to this segment,
@@ -380,9 +380,6 @@ class NetworkML():
                     tt = moose.TimeTable(tt_path)
                     tt_filenums = moose.Mstring(tt_path+'/fileNumbers')
                     tt_filenums.value = filenums
-                    ## obsolete addField
-                    #tt.addField('fileNumbers')
-                    #tt.setField('fileNumbers',filenums)
                     ## Be careful to connect the timetable only once while creating it as below:
                     ## note that you need to use Synapse (auto-created) under SynChan
                     ## to get/set weights , addSpike-s etc.
@@ -392,22 +389,12 @@ class NetworkML():
                     ## above works, but below gives me an error sayin getNum_synapse not found
                     ## but both work in Demos/snippets/lifcomp.py
                     #syn.synapse.num += 1
-                    ##### BUG BUG BUG in MOOSE:
-                    ##### Subhasis said addSpike always adds to the first element in syn.synapse
-                    ##### Create a new synapse above everytime
-                    ##### Also another bug: only 'Sparse' works, 'Single' message causes crash
-                    m = moose.connect(tt,"eventOut",syn.synapse.vec[-1],"addSpike","Sparse")
-                    ## if setting "Sparse" connections above, use below to set 1 synapse
-                    m.setRandomConnectivity(1.0, 1) # (conn prob, num of connections)
+                    m = moose.connect(tt,"eventOut",syn.synapse[-1],"addSpike","Single")
                 else:
                     ## if it exists, append file number to the field 'fileNumbers'
                     ## append filenumbers from 'file[+<glomnum>]_<filenumber1>[_<filenumber2>...]'
-                    tt_filenums = moose.Mstring(moosesynapse.path+'/fileNumbers')
+                    tt_filenums = moose.Mstring(tt_path+'/fileNumbers')
                     tt_filenums.value += '_' + filenums
-                    ### obsolete getField, etc.
-                    #tt = moose.TimeTable(tt_path)
-                    #filenums = tt.getField('fileNumbers') + '_' + filenums
-                    #tt.setField('fileNumbers',filenums)
             #### syn.Gbar remains the same, but we play with the weight which is a factor to Gbar
             #### The delay and weight can be set only after connecting a spike event generator.
             #### delay and weight are arrays: multiple event messages can be connected to a single synapse
@@ -433,6 +420,7 @@ class NetworkML():
         ## deep copies the library synapse to an instance under postcomp named as <arg3>
         synid = moose.copy(moose.Neutral('/library/'+syn_name),postcomp,syn_name_full)
         syn = moose.SynChan(synid)
+        # mgblock connections if required
         childmgblock = utils.get_child_Mstring(syn,'mgblockStr')
         #### connect the post compartment to the synapse
         if childmgblock.value=='True': # If NMDA synapse based on mgblock, connect to mgblock

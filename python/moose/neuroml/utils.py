@@ -14,7 +14,6 @@ indent(...) is an in-place prettyprint formatter copied from http://effbot.org/z
 from xml.etree import cElementTree as ET
 from xml.etree import ElementTree as slowET
 from math import *
-import moose
 import os
 
 neuroml_debug = False

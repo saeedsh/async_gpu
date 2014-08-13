@@ -54,9 +54,19 @@ const Cinfo* SpineMesh::initCinfo()
 			parentVoxel 
 		(
 		 	"parentVoxel",
+			"Vector of indices of proximal voxels within this mesh."
+			"Spines are at present modeled with just one compartment,"
+			"so each entry in this vector is always set to EMPTY == -1U",
+			&SpineMesh::getParentVoxel
+		);
+
+		static ReadOnlyValueFinfo< SpineMesh, vector< unsigned int > >
+			neuronVoxel 
+		(
+		 	"neuronVoxel",
 			"Vector of indices of voxels on parent NeuroMesh, from which "
 			"the respective spines emerge.",
-			&SpineMesh::getParentVoxel
+			&SpineMesh::getNeuronVoxel
 		);
 
 		//////////////////////////////////////////////////////////////
@@ -144,6 +154,17 @@ vector< unsigned int > SpineMesh::getParentVoxel() const
 }
 
 /**
+ * Returns index of voxel on NeuroMesh to which this spine is connected.
+ */
+vector< unsigned int > SpineMesh::getNeuronVoxel() const
+{
+	vector< unsigned int > ret( spines_.size(), -1U );
+	for ( unsigned int i = 0; i < spines_.size(); ++i ) 
+		ret[i] = spines_[i].parent();
+	return ret;
+}
+
+/**
  * This assumes that lambda is the quantity to preserve, over numEntries.
  * So when the compartment changes volume, numEntries changes too.
  * Assumes that the soma node is at index 0.
@@ -216,7 +237,7 @@ void SpineMesh::handleSpineList(
 /// Virtual function to return MeshType of specified entry.
 unsigned int SpineMesh::getMeshType( unsigned int fid ) const
 {
-	assert( fid < spines_.size() * 3 );
+	assert( fid < spines_.size() );
 	return CYL;
 }
 
@@ -231,7 +252,7 @@ double SpineMesh::getMeshEntryVolume( unsigned int fid ) const
 {
 	if ( spines_.size() == 0 )
 		return 1.0;
-	assert( fid < spines_.size() * 3 );
+	assert( fid < spines_.size() );
 	return spines_[ fid % spines_.size() ].volume();
 }
 
@@ -452,6 +473,9 @@ void SpineMesh::matchNeuroMeshEntries( const ChemCompt* other,
 		for ( unsigned int i = 0; i < spines_.size(); ++i ) {
 			double xda = spines_[i].rootArea() / spines_[i].diffusionLength();
 			ret.push_back( VoxelJunction( i, spines_[i].parent(), xda ) );
+			ret.back().firstVol = spines_[i].volume();
+			ret.back().secondVol = 
+					nm->getMeshEntryVolume( spines_[i].parent() );
 		}
 	} else {
 		assert( 0 ); // Don't know how to do this yet.

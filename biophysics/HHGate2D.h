@@ -53,24 +53,44 @@ class HHGate2D
 		/**
 		 * Returns the A interpol
 		 */
-		Interpol2D* getTableA( unsigned int i );
+                vector< vector< double > > getTableA(const Eref& e) const;
+                void setTableA(const Eref& e, vector< vector< double > > value);
 
-		/**
-		 * Dummy access func for Interpols. Always returns 1.
-		 */
-		unsigned int getNumTable() const;
-
-		/**
-		 * Dummy assignment function for the number of interpols:
-		 * We always have both interpols 
-		 */
-		void setNumTable( unsigned int num );
 
 		/**
 		 * Returns the B interpol
 		 */
-		Interpol2D* getTableB( unsigned int i );
+                vector< vector< double > > getTableB( const Eref& e ) const;
+                void setTableB( const Eref& e, vector< vector< double > > value);
 
+                ///
+                // Setting table parameters
+                ///
+                double getXminA(const Eref& e) const;
+                void setXminA(const Eref& e, double value);
+                double getXmaxA(const Eref& e) const;
+                void setXmaxA(const Eref& e, double value);
+                unsigned int getXdivsA(const Eref& e) const;
+                void setXdivsA(const Eref& e, unsigned int value);
+                double getYminA(const Eref& e) const;
+                void setYminA(const Eref& e, double value);
+                double getYmaxA(const Eref& e) const;
+                void setYmaxA(const Eref& e, double value);
+                unsigned int getYdivsA(const Eref& e) const;
+                void setYdivsA(const Eref& e, unsigned int value);
+                double getXminB(const Eref& e) const;
+                void setXminB(const Eref& e, double value);
+                double getXmaxB(const Eref& e) const;
+                void setXmaxB(const Eref& e, double value);
+                unsigned int getXdivsB(const Eref& e) const;
+                void setXdivsB(const Eref& e, unsigned int value);
+                double getYminB(const Eref& e) const;
+                void setYminB(const Eref& e, double value);
+                double getYmaxB(const Eref& e) const;
+                void setYmaxB(const Eref& e, double value);
+                unsigned int getYdivsB(const Eref& e) const;
+                void setYdivsB(const Eref& e, unsigned int value);
+                                
 		static const Cinfo* initCinfo();
 	private:
 		Interpol2D A_;

@@ -35,7 +35,26 @@ class GssaVoxelPools: public VoxelPoolsBase
 		 */
 		void reinit( const GssaSystem* g );
 
+		void updateAllRateTerms( const vector< RateTerm* >& rates,
+					   unsigned int numCoreRates	);
+		void updateRateTerms( const vector< RateTerm* >& rates,
+			unsigned int numCoreRates, unsigned int index );
+
+		double getReacVelocity( unsigned int r, const double* s ) const;
+		void updateReacVelocities( const GssaSystem* g,
+			const double* s, vector< double >& v ) const;
+
+		/**
+		 * Assign the volume, and handle the cascading effects by scaling
+		 * all the dependent values of nInit and rates if applicable.
+		 */
+		void setVolumeAndDependencies( double vol );
+
+		void setStoich( const Stoich* stoichPtr );
+
 	private:
+		const Stoich* stoichPtr_;
+
 		/// Time at which next event will occur.
 		double t_; 
 
@@ -43,7 +62,6 @@ class GssaVoxelPools: public VoxelPoolsBase
 		 * Total propensity of all the reactions in the system
 		 */
 		double atot_;
-
 
 		/** 
 		 * State vector of reaction velocities. Only a subset are
@@ -54,7 +72,9 @@ class GssaVoxelPools: public VoxelPoolsBase
 		// Possibly we should put independent RNGS, so save one here.
 		
 		/// Looks up vol-matched Rates from the stoich
-		unsigned int volIndex_;
+		//unsigned int volIndex_;
+
+		vector< RateTerm* > rates_;
 };
 
 #endif	// _GSSA_VOXEL_POOLS_H
