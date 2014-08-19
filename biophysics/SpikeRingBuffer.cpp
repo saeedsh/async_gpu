@@ -15,7 +15,7 @@
 using namespace std;
 #include "SpikeRingBuffer.h"
 
-const unsigned int SpikeRingBuffer::MAXBIN = 128;
+const unsigned int SpikeRingBuffer::MAXBIN = 4048;
 
 SpikeRingBuffer::SpikeRingBuffer()
 		: dt_( 1e-4 ), 
