@@ -162,6 +162,14 @@ const Cinfo* Stoich::initCinfo()
 			new EpFunc1< Stoich, Id >( &Stoich::buildXreacs )
 		);
 
+		static DestFinfo filterXreacs( "filterXreacs",
+			"Filter cross-reaction terms on current stoich"
+			"This function clears out absent rate terms that would "
+			"otherwise try to compute cross reactions where the "
+			"junctions are not present. ",
+			new OpFunc0< Stoich >( &Stoich::filterXreacs )
+		);
+
 		//////////////////////////////////////////////////////////////
 		// SrcFinfo Definitions
 		//////////////////////////////////////////////////////////////
@@ -186,6 +194,7 @@ const Cinfo* Stoich::initCinfo()
 		&proxyPools,		// ReadOnlyLookupValue
 		&unzombify,			// DestFinfo
 		&buildXreacs,		// DestFinfo
+		&filterXreacs,		// DestFinfo
 	};
 
 	static Dinfo< Stoich > dinfo;
@@ -217,7 +226,7 @@ Stoich::Stoich()
 		kinterface_( 0 ),
 		dinterface_( 0 ),
 		rates_( 0 ), 	// No RateTerms yet.
-		uniqueVols_( 1, 1.0 ), 
+		// uniqueVols_( 1, 1.0 ), 
 		numVoxels_( 1 ),
 		objMapStart_( 0 ),
 		numVarPools_( 0 ),
@@ -229,7 +238,7 @@ Stoich::Stoich()
 
 Stoich::~Stoich()
 {
-	// unZombifyModel();
+	unZombifyModel();
 	// Note that we cannot do the unZombify here, because it is too
 	// prone to problems with the ordering of the delete operations
 	// relative to the zombies.
@@ -420,15 +429,19 @@ void Stoich::setCompartment( Id compartment ) {
 			if ( !doubleEq( temp.back(), *i / bigVol ) )
 				temp.push_back( *i / bigVol );
 		}
+		/*
 		uniqueVols_.clear();
 		for ( int i = temp.size() - 1; i >= 0; i-- ) {
 			uniqueVols_.push_back( temp[i] * bigVol );
 		}
+		*/
+		/*
 	} else {
 		uniqueVols_.resize( 1 );
 		uniqueVols_[0] = 1.0;
 		cout << "Warning: Stoich::setCompartment: " << 
 				compartment.path() << ". Compartment has zero voxels\n";
+				*/
 	}
 }
 
@@ -819,8 +832,9 @@ void Stoich::allocateModel( const vector< Id >& elist )
 void Stoich::installAndUnschedFunc( Id func, Id Pool )
 {
 	// Unsched Func
-	vector< ObjId > unsched( 1, func );
-	Shell::dropClockMsgs(  unsched, "process" );
+	func.element()->setTick( -2 ); // Disable with option to resurrect.
+	// vector< ObjId > unsched( 1, func );
+	// Shell::dropClockMsgs(  unsched, "process" );
 
 	// Install the FuncTerm
 	static const Finfo* funcSrcFinfo = 
@@ -868,6 +882,11 @@ const KinSparseMatrix& Stoich::getStoichiometryMatrix() const
 void Stoich::buildXreacs( const Eref& e, Id otherStoich )
 {
 	kinterface_->setupCrossSolverReacs( offSolverPoolMap_, otherStoich );
+}
+
+void Stoich::filterXreacs()
+{
+	kinterface_->filterCrossRateTerms( offSolverReacCompts_ );
 }
 
 void Stoich::comptsOnCrossReacTerms( vector< pair< Id, Id > >& xr ) const
@@ -918,8 +937,6 @@ void Stoich::zombifyModel( const Eref& e, const vector< Id >& elist )
 	temp.insert( temp.end(), offSolverReacs_.begin(), offSolverReacs_.end() );
 
 	for ( vector< Id >::const_iterator i = temp.begin(); i != temp.end(); ++i ){
-		vector< ObjId > unsched( 1, *i );
-		Shell::dropClockMsgs( unsched, "process" );
 		Element* ei = i->element();
 		if ( ei->cinfo() == poolCinfo ) {
 			double concInit = 
@@ -971,6 +988,8 @@ void Stoich::unZombifyPools()
 	unsigned int i;
 	for ( i = 0; i < numVarPools_; ++i ) {
 		Element* e = idMap_[i].element();
+		if ( !e || e->isDoomed() )
+			continue;
 		if ( e != 0 &&  e->cinfo() == zombiePoolCinfo )
 			PoolBase::zombify( e, poolCinfo, Id(), Id() );
 	}
@@ -980,6 +999,8 @@ void Stoich::unZombifyPools()
 	for ( ; i < tot; ++i )
    	{
 		Element* e = idMap_[i].element();
+		if ( !e || e->isDoomed() )
+			continue;
 		if ( e != 0 &&  e->cinfo() == zombieBufPoolCinfo )
 			PoolBase::zombify( e, bufPoolCinfo, Id(), Id() );
 	}
@@ -990,10 +1011,9 @@ void Stoich::unZombifyFuncs()
 {
 	static const Cinfo* funcPoolCinfo = Cinfo::find( "FuncPool" );
 	static const Cinfo* zombieFuncPoolCinfo = Cinfo::find( "ZombieFuncPool");
-	Shell* s = reinterpret_cast< Shell* >( Id().eref().data() );
+	// Shell* s = reinterpret_cast< Shell* >( Id().eref().data() );
 	unsigned int start = 
 			numVarPools_ + offSolverPools_.size() + numBufPools_;
-	vector< ObjId > list;
 	for ( unsigned int k = 0; k < numFuncPools_; ++k ) {
 		unsigned int i = k + start;
 		Element* e = idMap_[i].element();
@@ -1004,11 +1024,11 @@ void Stoich::unZombifyFuncs()
 			if ( funcId != Id() ) {
 				assert ( funcId.element()->cinfo()->isA( "FuncBase" ) );
 				// s->doUseClock( funcId.path(), "process", 5 );
-				list.push_back( funcId );
+				// Should really make a zombie funct to do this properly
+				funcId.element()->setTick( 12 );
 			}
 		}
 	}
-	s->addClockMsgs( list, "process", 5, 0 );
 }
 
 void Stoich::unZombifyModel()
@@ -1025,7 +1045,7 @@ void Stoich::unZombifyModel()
 	unZombifyPools();
 	unZombifyFuncs();
 
-	Shell* s = reinterpret_cast< Shell* >( Id().eref().data() );
+	// Shell* s = reinterpret_cast< Shell* >( Id().eref().data() );
 
 	for ( vector< Id >::iterator i = reacMap_.begin(); 
 						i != reacMap_.end(); ++i ) {
@@ -1047,10 +1067,6 @@ void Stoich::unZombifyModel()
 		if ( e != 0 &&  e->cinfo() == zombieEnzCinfo )
 			CplxEnzBase::zombify( e, enzCinfo, Id() );
 	}
-
-	vector< ObjId > temp( idMap_.begin(), 
-			idMap_.begin() + numVarPools_ + numBufPools_ + numFuncPools_ );
-	s->addClockMsgs( temp, "proc", 4, 0 );
 }
 
 unsigned int Stoich::convertIdToPoolIndex( Id id ) const

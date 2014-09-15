@@ -45,9 +45,6 @@
 
 # Code:
 import moose
-import pylab
-import numpy
-
 
 def many_ematrix_to_one_element():
     """This is an example of event messages from multiple SpikeGen objects
@@ -78,19 +75,6 @@ def many_ematrix_to_one_element():
         print sg.path, '-->',
         for m in sg.msgOut:
             print moose.element(m).adjacent[sg].path
-    tab = moose.Table( '/graphs' )
-
-    moose.connect( tab, 'requestOut', spikegens[0] , 'getThreshold')
-
-    moose.reinit();
-    moose.start(1000);
-
-    print tab.vector.size
-    t = numpy.arange( 0, tab.vector.size, 1 )
-    pylab.plot( t, tab.vector )
-    pylab.legend()
-    pylab.show()
-
     
 if __name__ == '__main__':
     many_ematrix_to_one_element()

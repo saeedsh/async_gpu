@@ -8,9 +8,8 @@
 **********************************************************************/
 
 #include "header.h"
-#include "SpikeRingBuffer.h"
+#include "SynHandlerBase.h"
 #include "Synapse.h"
-#include "SynHandler.h"
 
 const Cinfo* Synapse::initCinfo()
 {
@@ -62,7 +61,7 @@ const Cinfo* Synapse::initCinfo()
 static const Cinfo* synapseCinfo = Synapse::initCinfo();
 
 Synapse::Synapse()
-	: weight_( 1.0 ), delay_( 0.0 ), buffer_( 0 )
+	: weight_( 1.0 ), delay_( 0.0 ), handler_( 0 )
 {
 	;
 }
@@ -87,9 +86,9 @@ double Synapse::getDelay() const
 	return delay_;
 }
 
-void Synapse::setBuffer( SpikeRingBuffer* buf )
+void Synapse::setHandler( SynHandlerBase* h )
 {
-	buffer_ = buf;
+	handler_ = h;
 }
 
 
@@ -101,7 +100,7 @@ void Synapse::addSpike( const Eref& e, double time )
 	if ( report && e.dataIndex() == tgtDataIndex ) {
 		cout << "	" << time << "," << e.fieldIndex();
 	}
-	buffer_->addSpike( time + delay_, weight_ );
+	handler_->addSpike( e.fieldIndex(), time + delay_, weight_ );
 }
 
 /////////////////////////////////////////////////////////////
@@ -116,7 +115,8 @@ void Synapse::addMsgCallback(
 {
 	if ( finfoName == "addSpike" ) {
 		ObjId pa = Neutral::parent( e );
-		SynHandler* sh = reinterpret_cast< SynHandler* >( pa.data() );
+		SynHandlerBase* sh = 
+				reinterpret_cast< SynHandlerBase* >( pa.data() );
 		unsigned int synapseNumber = sh->addSynapse();
 		SetGet2< unsigned int, unsigned int >::set( 
 						msg, "fieldIndex", msgLookup, synapseNumber );
@@ -134,7 +134,8 @@ void Synapse::dropMsgCallback(
 {
 	if ( finfoName == "addSpike" ) {
 		ObjId pa = Neutral::parent( e );
-		SynHandler* sh = reinterpret_cast< SynHandler* >( pa.data() );
+		SynHandlerBase* sh = 
+				reinterpret_cast< SynHandlerBase* >( pa.data() );
 		sh->dropSynapse( msgLookup );
 	}
 }

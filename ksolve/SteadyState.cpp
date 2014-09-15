@@ -260,17 +260,37 @@ const Cinfo* SteadyState::initCinfo()
 	static string doc[] =
 	{
 		"Name", "SteadyState",
-		"Author", "Upinder S. Bhalla, 2009, NCBS",
+		"Author", "Upinder S. Bhalla, 2009, updated 2014, NCBS",
 		"Description", "SteadyState: works out a steady-state value for "
-		"a reaction system. It uses GSL heavily, and isn't even compiled "
-		"if the flag isn't set. It finds the ss value closest to the "
-		"initial conditions, defined by current molecular concentrations."
- "If you want to find multiple stable states, use the MultiStable object,"
- "which operates a SteadyState object to find multiple states."
-	"If you want to carry out a dose-response calculation, use the "
- 	"DoseResponse object."
- 	"If you want to follow a stable state in phase space, use the "
-	"StateTrajectory object. "
+		"a reaction system. "
+		"This class uses the GSL multidimensional root finder algorithms "
+		"to find the fixed points closest to the "
+		"current molecular concentrations. "
+		"When it finds the fixed points, it figures out eigenvalues of "
+		"the solution, as a way to help classify the fixed points. "
+		"Note that the method finds unstable as well as stable fixed "
+		"points.\n "
+		"The SteadyState class also provides a utility function "
+	    "*randomInit()*	to "
+		"randomly initialize the concentrations, within the constraints "
+		"of stoichiometry. This is useful if you are trying to find "
+		"the major fixed points of the system. Note that this is "
+		"probabilistic. If a fixed point is in a very narrow range of "
+		"state space the probability of finding it is small and you "
+		"will have to run many iterations with different initial "
+		"conditions to find it.\n "
+		"The numerical calculations used by the SteadyState solver are "
+		"prone to failing on individual calculations. All is not lost, "
+		"because the system reports the solutionStatus. "
+		"It is recommended that you test this field after every "
+		"calculation, so you can simply ignore "
+		"cases where it failed and try again with different starting "
+		"conditions.\n "
+		"Another rule of thumb is that the SteadyState object is more "
+		"likely to succeed in finding solutions from a new starting point "
+		"if you numerically integrate the chemical system for a short "
+		"time (typically under 1 second) before asking it to find the "
+		"fixed point. "
 	};
 	
 	static Dinfo< SteadyState > dinfo;
@@ -755,6 +775,18 @@ void SteadyState::classifyState( const double* T )
 #endif
 }
 
+static bool isSolutionPositive( const vector< double >& x )
+{
+	for ( vector< double >::const_iterator 
+					i = x.begin(); i != x.end(); ++i ) {
+		if ( *i < 0.0 ) {
+			cout << "Warning: SteadyState iteration gave negative concs\n";
+			return false;
+		}
+	}
+	return true;
+}
+
 /**
  * The settle function computes the steady state nearest the initial
  * conditions.
@@ -814,16 +846,11 @@ void SteadyState::settle( bool forceSetup )
 		status = iterate( gsl_multiroot_fsolver_dnewton, &ri, maxIter_ );
 	status_ = string( gsl_strerror( status ) );
 	nIter_ = ri.nIter;
-	if ( status == GSL_SUCCESS ) {
+	if ( status == GSL_SUCCESS && isSolutionPositive( ri.nVec ) ) {
 		solutionStatus_ = 0; // Good solution
 		LookupField< unsigned int, vector< double > >::set(
 			ksolve,"nVec", 0, ri.nVec );
 		classifyState( T );
-		/*
-		 * Should happen in the ss_func.
-		for ( i = 0; i < numVarPools_; ++i )
-			s_->S()[i] = gsl_vector_get( op( solver->x ), i );
-			*/
 	} else {
 		cout << "Warning: SteadyState iteration failed, status = " <<
 			status_ << ", nIter = " << nIter_ << endl;
@@ -983,6 +1010,16 @@ void recalcTotal( vector< double >& tot, gsl_matrix* g, const double* S )
 }
 #endif // end of long section of functions using GSL
 
+static bool checkAboveZero( const vector< double >& y )
+{
+	for ( vector< double >::const_iterator
+			i = y.begin(); i != y.end(); ++i ) {
+		if ( *i < 0.0 )
+			return false;
+	}
+	return true;
+}
+
 /**
  * Generates a new set of values for the S vector that is a) random
  * and b) obeys the conservation rules.
@@ -1017,7 +1054,9 @@ void SteadyState::randomizeInitialCondition( const Eref& me )
 
 	// Put Find a vector Y that fits the consv rules.
 	vector< double > y( numVarPools_, 0.0 );
-	fitConservationRules( U, eliminatedTotal, y );
+	do {
+		fitConservationRules( U, eliminatedTotal, y );
+	} while ( !checkAboveZero( y ) );
 
 	// Sanity check. Try the new vector with the old gamma and tots
 	for ( int i = 0; i < numConsv; ++i ) {

@@ -245,7 +245,7 @@ def make_synapses(spikegen, synchan, connprob=1.0, delay=5e-3):
             
 
 if __name__ == '__main__':
-    simtime = 0.01
+    simtime = 0.1
     simdt = 0.25e-5
     plotdt = 0.25e-3
     size = 2
@@ -282,15 +282,15 @@ if __name__ == '__main__':
     moose.start(simtime)
     plt.subplot(221)
     for oid in vm_a.vector:
-        plt.plot(oid)
+        plt.plot(oid.vector, label=oid.path)
     plt.legend()
     plt.subplot(223)
     for oid in vm_b.vector:
-        plt.plot(oid)
+        plt.plot(oid.vector, label=oid.path)
     plt.legend()
     plt.subplot(224)
     for ii in gksyn_b.vector:
-        plt.plot(ii)
+        plt.plot(ii.vector, label=ii.path)
     plt.legend()
     plt.show()
     

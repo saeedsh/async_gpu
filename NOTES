@@ -4521,8 +4521,8 @@ properly. May be a general problem with legacy x-compt reac systems.
 
 I need to fix the following:
 * Several of the GSSA bistable snippets don't flip state the way they used to
-- Cspace models are not loaded properly
-- Check that the multivol gsl models do the right thing.
+* Cspace models are not loaded properly
+* Check that the multivol gsl models do the right thing.
 - Fix the dangling proxy problem.
 * Re-examine vol change calculations.
 	Both ChemCompt and Stoich have independent functions doing the same
@@ -4549,6 +4549,506 @@ Did a simple test for presence of voxelVol messages to decide whether to
 do scan through all child objects, or to scale by using the messaging. This
 works. Clears unit tests and most of the snippets I've tested. The problem
 with the unconnected voxel in crossComptNeuroMesh.cpp remains and I'll look
-at it next.
+at it next. 
+Checkin 5740.
+
+From 17 July 
+
+Moose key things to do before release and paper:
+*Ksolve cross compartment
++Synapses
+KKit GUI
+*Clocks
+*Identifying message source.
++Documentation
+	Tutorials
+		- How to load and run a neuronal model (using NEUROML)
+		- How to load and run a chemical kinetic model (using
+			kkit or SBML formats)
+		- How to load and run a reaction-diffusion model
+			kkit + dsolve
+		- How to load and run a multiscale model.
+	GUI documentation internal.
+
+Packaging:
+	.deb
+	Fedora rpm
+	mac?
+	Virtual box, small as possible.
+
+
+Preparing to change synapse. As preparation, did some benchmarks on an 
+intFire network. Turns out that the benchmark options in MOOSE were broken.
+So were the unit test options - the thing was running unit tests every time.
+Fixed. Ran the intFire with the ring buffer synapse, takes 24.5 seconds
+to do 200K steps.
+
+
+Designing synapse handling. Many problems with previous.
+- Synapse must be a virtual base class, since we have to deal with a range of
+	synapses with different learning rules.
+- SynHandler<T> manages a vector< T > of some class derived from Synapse. It
+	also has a priority_queue< of pair< synIndex, arrivalTime > >
+	- It deals with addSpike( ptr, time ) which places the 
+		index of the syn with new spike, and the time of
+		generation + delay, into the priority queue.
+	- It has a pure virtual function Synapse* popBuffe
+
+- I need to be able to independently specify the synapse type and the
+	parent compartment. Something like the SynChans do.
+ 	This will let me put arbitrary synapses on an intFire.
+
+- I need to specify the interface for checking/updating the Synapse.
+	- Pass in presyn Vm
+	- pass in time since last AP??
+	- Pop it if ready, go back for more.
+
+=============================================================================
+14 Aug
+Orthogonal classes:
+	1. Synapses: individual weight, delay, learning variables.
+	2. SynHandlers: Manage synapses, manage queueing of input events,
+		collective syn params for learning,
+	3. Electrophys: Channels, IntFire neurons
+
+Points of possible orthogonality:
+	- Synapses vs SynHandlers: different kinds of queuing for the same 
+		synapses. This is probably a minor and specialized case.
+	- SynHandlers vs Electrophys: map many kinds of synaptic properties, 
+		including different learning rules, to different SynChans with
+		one or two exponentials, or intFires, or izzy neurons.
+OK, so we will only have 2 orthogonal classes: the SynHandlers and the
+electrophys classes.
+API for the classes: electrophys classes need to know an Activation term
+as a sporadic event, from the SynHandler. This is typically an analog impulse 
+function for a single synaptic event, but could be a continuous variable if
+the synapse experiences continuous input, like a dendro-dendritic synapse.
+SynHandlers may optionally need to know any number of terms from the 
+electrophys side, ranging from events for action potential timings to 
+continuous Ca or Vm.
+This unfortunately requires that the SynHandler receive a process message.
+
+Implemented it. There are some modest differences with absolute values from
+the IntFire unit test. Other than those, the code seems to run fine but
+about 50% slower according to the benchmarks. This is not surprising as there
+is another whole set of objects process'ed and another layer of messages.
+Not to mention the queueing synapses. Need to work out how to profile it.
+
+Also fixed a bug reported by Dilawar about a function called by the benchmarks
+that is hidden by the debug flag.
+
+Checkin 5743.
+
+Fixed a bug in Gssa calculations, due to pickReac very rarely going out of
+range of existing reactions.
+
+Fixed dangling files which were problems for other people to compile.
+
+Working on IntFire snippet. Somewhat stuck. Trying to get it to keep
+firing by having the inputLayer of spikeGens keep ticking away.
+=============================================================================
+15 Aug
+Fixed another compile oversight.
+Still stuck with IntFire snippet, but I've exhumed an old unit test for
+SynChans and that has cleaned up a bit of code.
+
+Spent a long time working on the snippet trying to get it to behave like the
+MOOSE unit test. Finally realized that I was running the snippet five times 
+longer than the unit test and the activity had died down.
+
+I can't expect identical activity because MOOSE uses a different random
+number than Numpy, and I'm using Numpy to set the weights etc.
+
+It would be nice for this and other situations to have an object to do 
+simple spiking stats. Counting/averaging/ISI/rate/fano factor and so on.
+Checkin 5751
+
+I should put this in, and plot it, and then fiddle with parameters here and
+in the unit tests so as to get sustained reasonable rate firing in the model.
+
+Trying to compile the new Stats.cpp.
+
+Done, clears unit tests, checked  in.
+
+Now working on SpikeStats, I have a snippet trying to test it out
+in recurrentIntFire.py.
+=============================================================================
+17 Aug
+Implemented SpikeStats and RandSpike and a snippet, RandSpikeStats.py
+to test them all. Quite satisfactory.
+Also updated recurrentIntFire.py to achieve sustained activity and plot it.
+
+Considering rescheduling, that is, setting up clock ticks automatically
+at creation. Not an urgent matter.
+
+Considering an optimization for messaging: have the opfuncs operate directly
+on pointers to the data rather than on Erefs, which have to look the
+data ptr up each time. Unfortunately many functions do rely on Erefs for
+message sending, for zombie lookups and for accessing Element fields. 
+What I could do instead is to expand the MsgDigest::targets_ vector to
+include ptr to object. 90% of time-critical calls should be possible to 
+do without further lookups.
+
+
+Check if Clock sets its internal dt to the smallest dt that is actually used,
+or to any small dt.
+
+
+Cleaning up Demos directory
+	- Need a README in each subdirectory
+	- Need to clean up traub2005 and Izhikevich
+	- Decide if symcomp belongs here at all
+	- Does hopfield do anything?
+	- Check that the files in the neuroml directory are OK.
+	- Eliminate util.
+
+Cleaning up Snippets directory
+	- Go through updating and checking each one
+	- Find a way to run all as a regression test, without display.
+	- Have an example for every class and every function in MOOSE.
+        - Put in an index so that one can find which snippet illustrates 
+		which class. Or provide a listing of all class names linked
+		to the appropriate file. 
+
+Misc
+	Have a sensible sorting for moose.showfields.
+	Check with Subha about which of the documentation options is actually
+	working at present. Should we do all our docs in markdown?
+
+Reorganizing directory structure.
+	moose
+		/README
+		/Copyright
+		/src
+			/basecode
+			/benchmarks # this is for C++ benchmarks.
+			/builtins
+			...
+		/Documentation
+			/user
+			/developer
+			...
+		/Demos
+			/squid
+			/tutorials
+			...
+		/gui
+			...
+		/benchmarks	# This is for MOOSE-wide benchmarks scripts.
+			/Rallpacks
+			...
+	
+
+Set up code for default ticks and their assignment during creation.
+Lots of additional infrastructure code too.
+I should assign default dts for these ticks, after making sure that
+empty dts dont get invoked in the clock loop.
+Also need to fix # of ticks.
+	
+Yet to compile.
+=============================================================================
+18 Aug 2014.
+
+* Set up default dts.
+* Fixed # of ticks. Not totally automatic, but mostly so.
+* Check invocation of empty dts and correct spec of base dt.
+
+I now have it working, need to retrofit some unit tests.
+- Along the way found and fixed a bug with deleting child elements - it was
+not getting all of them. But this needs to be revisited using a low-level
+Element call because it is very inefficient.
+- Need to write a snippet to show equivalent ways of scheduling something.
+* Need to check zombification and automatic clearing/rebuilding of ticks.
+	Clearing doesn't happen
+- Would like some more intelligence in how to assign the Table tick for plots.
+- Need to redo ReadKkit and ReadCspace to put objects appropriately, and to
+	fit with the new scheduling.
+
+=============================================================================
+19 Aug
+A documentation framework. The Use of Moose.
+
+1. What is MOOSE and what is it good for?
+
+2. Loading and running models
+	2.1 Hello, MOOSE: Load, run and display existing models.
+	2.2 Adding graphs
+	2.2 Start, stop, and speed: Timing and scheduling
+	2.3 Accessing and tweaking parameters
+	2. Storing simulation output.
+
+3. Chemical signaling models
+	3.1 Loading, modifying, saving
+	3.2 Running with different numerical methods
+	3.3 Changing volumes
+	3.4 Feeding tabulated input to a model
+	3.5 Finding steady states
+	3.6 Making a dose-response curve
+	3.7 Building a chemical model from parts.
+	3.8 Oscillation models
+	3.8 Bistability models
+
+4. Reaction-diffusion models
+	4.1 In a cylinder
+	4.2 In a neuron
+	4.3 Reaction+diffusion+motor transport
+	4.4 A Turing model
+	4.5 A spatial bistable model.
+
+5. Single cell models
+	5.1 Loading, modifying, saving
+	5.2 Explicit vs. implicit methods
+	5.3 Integrate-and-fire models
+	5.4 The HH model
+	5.5 Analyzing spike trains
+
+6. Network models
+	6.1 Connecting two cells together
+	6.2 Regular and plastic synapses
+	6.3 Providing random input to a cell
+	6.4 A recurrent integrate-and-fire network
+	6.5 An integrate-and-fire network with plasticity
+	6.6 A feed-forward network with random input
+	6.7 Using compartmental models in networks.
+
+7. Multiscale models
+	7.1 A multiscale HH model with chemical feedback
+	7.2 A multiscale compartmental model with chemical feedback
+
+8. Graphics
+	8.1 Displaying time-series plots 
+	8.2 Animation of values along an axis.
+	8.3 Using MOOGLI widgets to display a neuron
+
+
+
+
+Looks like problem in unzombification is that upon stoich deletion the
+objects dont get unzombified. Which is because of ordering issues.
+If I remember, the Elements know if they are slated for destruction.
+
+=============================================================================
+21 Aug.
+	Proceeding with documentation. Put in general chapter outline for
+the MOOSE cookbook.
+
+Stuff to fix still with solver and zombification scheduling.
+=============================================================================
+23 Aug.
+I think that the solver delete is now safe. 
+Now to figure out the best way to build on an existing model for merging and
+for editing. Deleting solver is the obvious way.
+
+After quite a bit of debugging, I have it working for solver clearing
+and rebuilding. The test script is switchKineticSolvers.py
+
+Next:
+- Make a few good cross-reac and multiscale model examples.
+
+
+For later on: There are some options for removing the fieldId in handling
+synapses.
+
+Basic requirement: 
+- Messages to synapses needs to identify individual synapses.
+- Want to have a single message to all equiv synapses in a network.
+
+Current approach manages this by
+- FieldElement index provides the identity of the synapse on each msg.
+- All FieldElements share the same channel parent.
+
+Alternate approaches
+Wrapper class + regular child elements on each synchan. Message goes to
+	common wrapper class. Wrapper class figures out mapping from its 
+	internal field indexing to that of the actual synapses on each synchan.
+
+Messages store extra index info + regular child elements on each synchan.
+	The messages go to the synchan, not to the synapse, but identify it
+	through their extra index.
+
+
+=============================================================================
+24 Aug
+	Trying to find why the system crashes with multi2.g. May need to run
+valgrind.
+
+=============================================================================
+25 Aug
+Fixed problem with indexing Func pools in Dsolve. Hack to ignore.
+Now problem with Ksolve nan. Possibly due to cross-compt reacs on non-
+connected compts. 
+
+Tracked it down. It was a silly oversight in the RateTerm calculations for
+volume scaling. Came up for the first in this model because I haven't used
+N-order reactions in the other tests.
+
+Now both multi2 and multi3 run and give reasonable outputs.
+Would like to compare multi2 with and without hsolve, but it isn't doing the
+right thing.
+
+Continuing documentation updates too.
+
+=============================================================================
+26 Aug.
+Worked on why the multi1 and multi2 models don't work in EE mode. Seems that
+there is an error in message setup for channels in ReadCell.cpp.
+
+Testing hhcomp.py
+I get good HH spiking with the original scheduling func that Subha has.
+I don't get channel responses with the new scheduling.
+
+Is it just that the functions don't get called, or is there something
+nasty happening with the messaging?
+
+Another clue: the channel process is called twice. Looks like some fairly
+serious message confusion is happening. Possibly only to do with shared msgs.
+
+27 Aug
+I think I have it: the library channels are scheduled (should not be) but
+the ones on the compartment are not (should be). Need to look at the copy
+function to ensure that sensible things happen
+
+=============================================================================
+27 Aug
+I think I have it: the library channels are scheduled (should not be) but
+the ones on the compartment are not (should be). Need to look at the copy
+function to ensure that sensible things happen.
+
+Fixed. Works. The ee method at 0.2us slowly is converging to the hsolve@10usec,
+still not there. Key thing is that the method works.
+
+=============================================================================
+28 Aug.
+Try to understand why crossComptNeuroMesh.py has a slowly decaying conc
+in first compt. Implemented foo.py based on this. will try:
+- shfiting compts so they no longer touch eath other, see what happens. Do the
+structures for junctions still remain and is there reaction stuff
+across.
+
+Did this. Fixed a minor bug with CubeMesh. Now I'm able to run with
+CubeMesh compartments, a<===>b<===>c is the reac. The problem occurs even 
+in this simple case. 
+
+Is there a way a voxel can find out if it a given x-reaction does not occur
+on it? There is already the hasXfer function, but this is for the voxel as a
+whole.
+
+Compiles, runs, but 
+At this point it looks like all of the reacs have been turned off.
+
+=============================================================================
+29 Aug.
+Looks like the proxyPoolsMap is never getting assigned.
+
+=============================================================================
+30 Aug.
+Some progress on it, seems to be OK now but I need to design proper
+unit tests.
+=============================================================================
+31 Aug.
+Lots of documentation and code snippets. Implemented a rather nice one for
+dose-response of a bistable.
+
+=============================================================================
+
+1 Sep. Working on demo neuroDiffusion.py.
+=============================================================================
+2 Sep. Still working on it, seems to be close.
+=============================================================================
+3/4 Sep. Now it looks OK. One issue to fix is that if I set concInit in the
+original pool, it should persist through voxelization and zombification.
+
+=============================================================================
+7 Sep.
+I need to do a gdb to find out why the Stoich::zombifyModel call (when
+the model path is set), fails to iterate through all voxels assigning concInit.
+
+The reac-diff models now work but the simple single compt models all seem
+to start at initConc = 0.
+
+Fixed this - the functions setting nInit were not setting PoolBase::initConc_.
+
+Checking 5799.
+
+Trying to fix the problem Nikon has with the cspace tests. I found and
+fixed one error but it is still possible to hang the steady-state finder.
+=============================================================================
+8 Sep.
+Tracked the problem with Nikon's model. Turns out that the routine for
+generating starting points consistent with the stoichiometry rules was
+also generating cases with negative concentration. Fixed. Now Nikon's 
+models, even the original one with 26 pools, works.
+
+Did lots of cleanup on the cylinderDiffusion snippet, with a nice animation.
+I want to make another snippet to check that the system does sensible things
+in a branching neuronal model, and also to illustrate bidirectional motor
+transport. Need to do this anyway for my own benefit.
+
+From FastMatrixElim.cpp:400, the motor equations are:
+* n-1:    dt*(D+M)*adx(-)
+* n:   1 -dt*[ D*adx(-) +D*adx(+) + M*adx(+) ]
+* n+1:    dt*D*adx(+)
+
+=============================================================================
+9 Sep.
+Making a display of a neuron to watch motor transport on it.
+This reveals errors.
+Further tests show that the errors happen only when there is branching.
+It is OK with a tapering geometry without branches.
+
+Tracked it (I think). Line 592 in FastMatrixElim.cpp shows that we are adding
+all the mols to every twig. Need instead to get the total XA downstream,
+and then weight the amount going to each twig by its XA.
+
+Fixed.
+This works very accurately for motor transport from soma toward dends.
+There is a numerical error though going the other way:
+
+mass consv =  86000366.962 86784536.0959
+It is not a dt problem, checked with much smaller diffdt.
+It is not that the terminal voxels have some bits left over. Checked with a
+printout of final concs.
+
+Fixed it: it was a problem with indexing.
+
+I'll update the transport demo to show the diffusions of a and b 
+in opposite directions, simultaneously. Done.
+
+Subha has reported a bug in Clock.cpp, causing assertion errors when 
+dt is not a clean multiple of the baseDt. Confirmed. Fixed.
+Fixed a problem arising from this fix.
+
+=============================================================================
+11 Sep
+Trying to build a decent snippet for multiscale models. I have one doing
+a rather boring thing, will need to modify. The exercise turns out to
+be nastier than expected. The Ca-dependent channels don't seem to do much.
+
+Ran into puzzling errors on the HSolve. Turns out that the ZombieHHChannel
+isn't done properly, and this is bound to cause issues if there is messaging
+to the channel. Need to fix.
+
+Managed to implement a decent single-compt multiscale model, but the
+HHChannel issues will need to be fixed soon.
+
+=============================================================================
+12 Sep
+
+Implemented a ChanCommon class to sit between ChanBase (virtual base class)
+and most of the other channel classes. This is the first step in having 
+a systematic channel inheritance framework to include the Zombie classes.
+
+Something is wrong about SynChans. They don't support synapses!
+Turns out the documentation was incorrect. SynChans need input from
+SynHandlers. Fixed docs.
+
+Tested out a couple of snippets. mgblock wasn't working. Did quite a bit
+of fixing on it and now it works. Uncovered and fixed a bug in the copying 
+of synapses.
+
+Ground through the refactoring, now the HSolver is working again with
+the refactored ZombieHHChannels. The crash with the ordering of plots
+is gone, but it turns out that we still need to put in the Adaptors before
+the Hsolve otherwise they don't receive input.
 
 =============================================================================

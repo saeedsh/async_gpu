@@ -78,7 +78,7 @@
 
 
 __author__ = "Subhasis Ray"
-
+import sys
 import numpy as np
 from PyQt4 import QtGui, QtCore
 from PyQt4.Qt import Qt
@@ -86,9 +86,8 @@ from matplotlib import mlab
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QTAgg as NavigationToolbar
-
-from mplugin import PlotBase
-
+#from moose import utils
+import moose
 class CanvasWidget(FigureCanvas):
     """Widget to draw plots on.
 
@@ -109,10 +108,42 @@ class CanvasWidget(FigureCanvas):
             self.reparent(args[0])
         elif (kwargs is not None) and ('parent' in kwargs):
             self.reparent(kwargs['parent'])
+        #self.setAcceptDrops(True)
         FigureCanvas.updateGeometry(self)
         self.axes = {}
         self.next_id = 0
         self.current_id = -1
+        tabList = []
+        self.addTabletoPlot = ''
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasFormat('text/plain'):
+            event.acceptProposedAction()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasFormat('text/plain'):
+            event.acceptProposedAction()
+
+    def eventFilter(self, source, event):
+        if (event.type() == QtCore.QEvent.Drop):
+            pass
+    
+    def dropEvent(self, event):
+        """Insert an element of the specified class in drop location"""
+
+        if not event.mimeData().hasFormat('text/plain'):
+            return
+        # print " active window ", self.isActiveWindow()
+        # print "Mouse : ", self.mouse
+
+        # pos = self.mapFromGlobal(QCursor.pos())
+        # print "Mouse Position : ", pos
+        self.modelRoot, self.element = event.mimeData().data
+        if isinstance (self.element,moose.PoolBase):
+            moose.utils.create(self.modelRoot,self.element,"Conc")
+        else:
+            QtGui.QMessageBox.question(self, 'Message',"This field is not plottable", QtGui.QMessageBox.Ok)
 
     def addSubplot(self, rows, cols):        
         """Add a subplot to figure and set it as current axes."""
@@ -122,9 +153,12 @@ class CanvasWidget(FigureCanvas):
         axes.set_title(chr(self.next_id + ord('A')))
         self.current_id = self.next_id
         self.next_id += 1
+        labelList = []
+        axes.legend(loc='upper center')
         return axes
 
     def plot(self, *args, **kwargs):
+        #self.callAxesFn('legend',loc='lower center',bbox_to_anchor=(0.5, -0.03),fancybox=True, shadow=True, ncol=3)
         return self.callAxesFn('plot', *args, **kwargs)
 
     def callAxesFn(self, fname, *args, **kwargs):
@@ -132,8 +166,8 @@ class CanvasWidget(FigureCanvas):
         if self.current_id < 0:
             self.addSubplot(1,1)
         fn = eval('self.axes[self.current_id].%s' % (fname))
-        return fn(*args, **kwargs)
 
+        return fn(*args, **kwargs)
 
 import sys
 import os
@@ -164,7 +198,7 @@ class CanvasWidgetTests(unittest.TestCase):
 
     def tearDown(self):
         self.app.exec_()
-    
+
 if __name__ == '__main__':
     unittest.main()
 

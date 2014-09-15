@@ -46,7 +46,7 @@
 # Code:
 import numpy as np
 import sys
-sys.path.append('/src/saeed/cuda-workspace/async_gpu/python')
+sys.path.append('/home/subha/src/moose_async13/python')
 import moose
 from settings import *
 

@@ -156,14 +156,17 @@ const Cinfo* Ksolve::initCinfo()
 			&process, &reinit
 		};
 		static SharedFinfo proc( "proc",
-			"Shared message for process and reinit",
+			"Shared message for process and reinit. These are used for "
+			"all regular Ksolve calculations including interfacing with "
+			"the diffusion calculations by a Dsolve.",
 			procShared, sizeof( procShared ) / sizeof( const Finfo* )
 		);
 		static Finfo* initShared[] = {
 			&initProc, &initReinit
 		};
 		static SharedFinfo init( "init",
-			"Shared message for process and reinit",
+			"Shared message for initProc and initReinit. This is used"
+		    " when the system has cross-compartment reactions. ",
 			initShared, sizeof( initShared ) / sizeof( const Finfo* )
 		);
 
@@ -836,12 +839,13 @@ void Ksolve::setupXfer( Id myKsolve, Id otherKsolve,
 		unsigned int j = vj[i].first;
 		assert( j < pools_.size() ); // Check voxel indices.
 		proxyVoxy[j].push_back( vj[i].second );
-		pools_[j].addProxyVoxy( myKsolveIndex, vj[i].second );
+		pools_[j].addProxyVoxy( myKsolveIndex, 
+						otherKsolvePtr->compartment_, vj[i].second);
 		unsigned int k = vj[i].second;
 		assert( k < otherCompt->getNumEntries() );
 		reverseProxyVoxy[k].push_back( vj[i].first );
 		otherKsolvePtr->pools_[k].addProxyVoxy( 
-						otherKsolveIndex, vj[i].first );
+			otherKsolveIndex, compartment_, vj[i].first );
 	}
 
 	// Build the indexing for the data values to transfer on each timestep
@@ -910,8 +914,8 @@ unsigned int Ksolve::assignProxyPools( const map< Id, vector< Id > >& xr,
 
 	proxyMols.insert( proxyMols.end(), 
 					otherProxies.begin(), otherProxies.end() );
-	if ( proxyMols.size() == 0 )
-		return 0;
+	// if ( proxyMols.size() == 0 )
+		// return 0;
 	sort( proxyMols.begin(), proxyMols.end() );
 	xfer_.push_back( XferInfo( otherKsolve ) );
 
@@ -926,6 +930,17 @@ unsigned int Ksolve::assignProxyPools( const map< Id, vector< Id > >& xr,
 						proxyMols[i] );
 	}
 	return proxyMols.size();
+}
+
+
+// This function cleans out the RateTerms of cross reactions that 
+// don't have anything to connect to.
+// It should be called after all cross reacs have been assigned.
+void Ksolve::filterCrossRateTerms( const vector< pair< Id, Id > >& xrt )
+{
+	for ( vector< VoxelPools >::iterator
+			i = pools_.begin(); i != pools_.end(); ++i )
+			i->filterCrossRateTerms( xrt );
 }
 
 /**

@@ -10,6 +10,11 @@
 #ifndef _SYNAPSE_H
 #define _SYNAPSE_H
 
+class SynHandlerBase;
+/**
+ * This is the base class for synapses. It is meant to be used as a
+ * FieldElement entry on a parent object, derived from the SynHandlerBase.
+ */
 class Synapse
 {
 	public:
@@ -20,9 +25,11 @@ class Synapse
 		double getWeight() const;
 		double getDelay() const;
 
-		void setBuffer( SpikeRingBuffer* buf );
-
 		void addSpike( const Eref& e, double time );
+
+		void setHandler( SynHandlerBase* h );
+
+		///////////////////////////////////////////////////////////////
 		static void addMsgCallback( 
 					const Eref& e, const string& finfoName, 
 					ObjId msg, unsigned int msgLookup );
@@ -33,7 +40,7 @@ class Synapse
 	private:
 		double weight_;
 		double delay_;
-		SpikeRingBuffer* buffer_;
+		SynHandlerBase* handler_;
 };
 
 #endif // _SYNAPSE_H

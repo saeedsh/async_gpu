@@ -21,12 +21,21 @@ from kkitOrdinateUtil import *
 import posixpath
 from mtoolbutton import MToolButton
 
+#from QtGui import QScrollArea
+
+#from DataTable import DataTable
 class KkitPlugin(MoosePlugin):
     """Default plugin for MOOSE GUI"""
     def __init__(self, *args):
         #print args
         MoosePlugin.__init__(self, *args)
         self.view = None
+        #self.plotView = PlotView(self)
+        #self.getRunView()
+        #self.plotView.dataTable = self.view._centralWidget.dataTable
+        #self.plotView.updateCallback = self.view._centralWidget.legendUpdate
+        #self.view._centralWidget.legendUpdate()
+        #self.dataTable = DataTable(self.dataRoot)
 
     def getPreviousPlugin(self):
         return None
@@ -45,6 +54,7 @@ class KkitPlugin(MoosePlugin):
 
     def getEditorView(self):
         if not hasattr(self, 'editorView'):
+            #self.editorView = KkitEditorView(self, self.dataTable)
             self.editorView = KkitEditorView(self)
             self.editorView.getCentralWidget().editObject.connect(self.mainWindow.objectEditSlot)
             #self.editorView.GrViewresize(self)
@@ -57,19 +67,24 @@ class KkitPlugin(MoosePlugin):
         self.view = RunView(self)
         graphView = self.view._centralWidget
         graphView.setDataRoot(self.modelRoot)
+        graphView.plotAllData()
         schedulingDockWidget = self.view.getSchedulingDockWidget().widget()
         self._kkitWidget = self.view.plugin.getEditorView().getCentralWidget()
+        #self.runView = KkitRunView(self,self.dataTable)
         self.runView = KkitRunView(self)
         self.currentRunView = self.runView.getCentralWidget()
-        schedulingDockWidget.runner.update.connect(self.currentRunView.changeBgSize)
-        schedulingDockWidget.runner.resetAndRun.connect(self.currentRunView.resetColor)
+
+        #schedulingDockWidget.runner.update.connect(self.currentRunView.changeBgSize)
+        #schedulingDockWidget.runner.resetAndRun.connect(self.currentRunView.resetColor)
         graphView.layout().addWidget(self.currentRunView,0,0,2,1)
         return self.view
 
 class KkitRunView(MooseEditorView):
 
+    #def __init__(self, plugin,dataTable):
     def __init__(self, plugin):
         MooseEditorView.__init__(self, plugin)
+        #self.dataTable =dataTable
     '''
     def getToolPanes(self):
         return super(KkitRunView, self).getToolPanes()
@@ -89,13 +104,12 @@ class KkitRunView(MooseEditorView):
             self._centralWidget.setModelRoot(self.plugin.modelRoot)
         return self._centralWidget
 
-
 class KkitEditorView(MooseEditorView):
+    #def __init__(self, plugin, dataTable):
     def __init__(self, plugin):
         MooseEditorView.__init__(self, plugin)
         ''' EditorView and if kkit model is loaded then save model in XML is allowed '''
-      
-        #self.insertMenu = QtGui.QMenu('&Insert')
+        #self.dataTable = dataTable
         self.fileinsertMenu = QtGui.QMenu('&File')
         if not hasattr(self,'SaveModelAction'):
             self.saveModelAction = QtGui.QAction('SaveToSBMLFile', self)
@@ -104,11 +118,6 @@ class KkitEditorView(MooseEditorView):
             self.fileinsertMenu.addAction(self.saveModelAction)
         self._menus.append(self.fileinsertMenu)
 
-    '''def GrViewresize(self,event):
-        print "GrViewresize in kkitEditorView"
-        #when Gui resize and event is sent which inturn call resizeEvent of qgraphicsview
-        self.view.resizeEvent1(event)
-    '''
     def SaveModelDialogSlot(self):
         type_sbml = 'SBML'
         filters = {'SBML(*.xml)': type_sbml}
@@ -138,7 +147,6 @@ class KkitEditorView(MooseEditorView):
     def getCentralWidget(self):
         if self._centralWidget is None:
             self._centralWidget = kineticEditorWidget()
-            #self._centralWidget.connect(self,QtCore.SIGNAL("resize(QResizeEvent)"),self._centralWidget.GrViewresize)
             self._centralWidget.setModelRoot(self.plugin.modelRoot)
         return self._centralWidget
 
@@ -146,7 +154,8 @@ class KkitEditorView(MooseEditorView):
 class  KineticsWidget(EditorWidgetBase):
     def __init__(self, *args):
         EditorWidgetBase.__init__(self, *args)
-        self.setAcceptDrops(True)
+
+        #self.setAcceptDrops(True)
         self.border = 10        
         self.sceneContainer = QtGui.QGraphicsScene(self)
         self.sceneContainer.setSceneRect(self.sceneContainer.itemsBoundingRect())
@@ -157,10 +166,26 @@ class  KineticsWidget(EditorWidgetBase):
         self.colorMap = pickle.load(colormap_file)
         colormap_file.close()   
         
-        if self.modelRoot == '/':
-            self.m = wildcardFind('/##[ISA=ChemCompt]')
-        else:
-            self.m = wildcardFind(self.modelRoot+'/##[ISA=ChemCompt]')
+        #A map b/w moose compartment key with QGraphicsObject
+        self.qGraCompt = {}
+        
+        #A map between mooseId of all the mooseObject (except compartment) with QGraphicsObject
+        self.mooseId_GObj = {}
+        
+        self.border = 5
+        self.arrowsize = 2
+        self.iconScale = 1
+        self.defaultComptsize = 5
+        self.itemignoreZooming = False
+        self.lineItem_dict = {}
+        self.object2line = defaultdict(list)
+
+    def getMooseObj(self):
+        #if self.modelRoot == '/':
+        #    self.m = wildcardFind('/##[ISA=ChemCompt]')
+        #else:
+
+        self.m = wildcardFind(self.modelRoot+'/##[ISA=ChemCompt]')
         if self.m:
             self.xmin = 0.0
             self.xmax = 1.0
@@ -177,9 +202,6 @@ class  KineticsWidget(EditorWidgetBase):
 
             if self.noPositionInfo:
                 self.autocoordinates = True
-                QtGui.QMessageBox.warning(self, 
-                                          'No coordinates found for the model', 
-                                          '\n Automatic layouting will be done')
             #raise Exception('Unsupported kkit version')
                 self.xmin,self.xmax,self.ymin,self.ymax,self.autoCordinatepos = autoCoordinates(self.meshEntry,self.srcdesConnection)
             # TODO: size will be dummy at this point, but I need the availiable size from the Gui
@@ -194,20 +216,6 @@ class  KineticsWidget(EditorWidgetBase):
             if self.ymax-self.ymin:
                 self.yratio = (self.size.height()-10)/(self.ymax-self.ymin)
             else: self.yratio = (self.size.height()-10)
-
-        #A map b/w moose compartment key with QGraphicsObject
-            self.qGraCompt = {}
-        
-        #A map between mooseId of all the mooseObject (except compartment) with QGraphicsObject
-            self.mooseId_GObj = {}
-        
-            self.border = 5
-            self.arrowsize = 2
-            self.iconScale = 1
-            self.defaultComptsize = 5
-            self.itemignoreZooming = False
-            self.lineItem_dict = {}
-            self.object2line = defaultdict(list)
 
     def makePoolItem(self, poolObj, qGraCompt):
         raise NotImplementedError('method must be reimplemented in subclass')
@@ -284,6 +292,7 @@ class  KineticsWidget(EditorWidgetBase):
         elif objClass == "tab":
             textcolor,bgcolor = getColor(info,self.colorMap)
         else:
+            
             textcolor,bgcolor = getColor(info,self.colorMap)
         graphicalObj.setDisplayProperties(xpos,ypos,textcolor,bgcolor)
     
@@ -322,7 +331,6 @@ class  KineticsWidget(EditorWidgetBase):
         changedItem = ''
 
         for item in self.sceneContainer.items():
-            #print "updateItemSlot",item
             if isinstance(item,PoolItem):
                 if mooseObject.getId() == element(item.mobj).getId():
                     item.updateSlot()
@@ -347,10 +355,12 @@ class  KineticsWidget(EditorWidgetBase):
         self.view.resizeEvent1(event)
 
     def updateModelView(self):
+        self.getMooseObj()
         # if self.modelRoot == '/':
         #     m = wildcardFind('/##[ISA=ChemCompt]')
         # else:
         #     m = wildcardFind(self.modelRoot+'/##[ISA=ChemCompt]')
+            
         if not self.m:
             # when we want an empty GraphicView while creating new model,
             # then remove all the view and add an empty view
@@ -358,8 +368,13 @@ class  KineticsWidget(EditorWidgetBase):
                 self.layout().removeWidget(self.view)
             createdItem = {}
             self.sceneContainer.setSceneRect(-self.width()/2,-self.height()/2,self.width(),self.height())
-            self.view = GraphicalView(self, self.modelRoot,self.sceneContainer,self.border,self,createdItem)
+            self.view = GraphicalView(self.widget, self.modelRoot,self.sceneContainer,self.border,self,createdItem)
             
+            if isinstance(self,kineticEditorWidget):
+                self.view.setRefWidget("editorView")
+                self.view.setAcceptDrops(True)
+            elif isinstance(self,kineticRunWidget):
+                self.view.setRefWidget("runView")
             self.connect(self.view, QtCore.SIGNAL("dropped"), self.objectEditSlot)
             hLayout = QtGui.QGridLayout(self)
             self.setLayout(hLayout)
@@ -378,7 +393,13 @@ class  KineticsWidget(EditorWidgetBase):
             createdItem = {}
             if hasattr(self, 'view') and isinstance(self.view, QtGui.QWidget):
                 self.layout().removeWidget(self.view)
-            self.view = GraphicalView(self,self.modelRoot,self.sceneContainer,self.border,self,createdItem)
+            self.view = GraphicalView(self.widget,self.modelRoot,self.sceneContainer,self.border,self,createdItem)
+            if isinstance(self,kineticEditorWidget):
+                self.view.setRefWidget("editorView")
+                self.view.setAcceptDrops(True)
+            elif isinstance(self,kineticRunWidget):
+                self.view.setRefWidget("runView")
+        
             #self.view.resizeEvent1(event)
             #self.view.fitInView(self.sceneContainer.itemsBoundingRect().x()-10,self.sceneContainer.itemsBoundingRect().y()-10,self.sceneContainer.itemsBoundingRect().width()+20,self.sceneContainer.itemsBoundingRect().height()+20,Qt.Qt.IgnoreAspectRatio)
             #self.view.fitInView(self.sceneContainer.itemsBoundingRect())
@@ -638,14 +659,16 @@ class  KineticsWidget(EditorWidgetBase):
 
 class kineticEditorWidget(KineticsWidget):
     def __init__(self,*args):
+
         KineticsWidget.__init__(self,*args)
         self.insertMenu = QtGui.QMenu('&Insert')
         self._menus.append(self.insertMenu)
         self.insertMapper = QtCore.QSignalMapper(self)
-        classlist = ['CubeMesh','CylMesh','Pool','FuncPool','SumFunc','Reac','Enz','MMenz','StimulusTable']
+        classlist = ['CubeMesh','CylMesh','Pool','BufPool','SumFunc','Reac','Enz','MMenz','StimulusTable']
         insertMapper, actions = self.getInsertActions(classlist)
         for action in actions:
-            self.insertMenu.addAction(action)        
+            self.insertMenu.addAction(action)
+        #self.view.setAcceptDrops(True)
 
     def GrViewresize(self,event):
         #when Gui resize and event is sent which inturn call resizeEvent of qgraphicsview
@@ -662,8 +685,8 @@ class kineticEditorWidget(KineticsWidget):
             for action in self.insertMenu.actions():
                 button = MToolButton()
                 button.setDefaultAction(action)
-                icon = QtGui.QIcon()
-                #icon.addPixmap(QtGui.QPixmap(QtCore.QString.fromUtf8("~/../../Doc/images/kkitGui/"+action.text()+".png")), QtGui.QIcon.Active, QtGui.QIcon.Off)
+                #set the unicode instead of image by setting
+                #button.setText(unicode(u'\u20de'))
                 button.setIcon(QtGui.QIcon("~/../../Docs/images/classIcon/"+action.text()+".png"))
                 #button.setIconSize(QtCore.QSize(200,200))
                 self._insertToolBar.addWidget(button)

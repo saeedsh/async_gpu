@@ -47,7 +47,7 @@
 """Simulate the passive version of the L2/3 pyramidal cell model from Branco et al 2010"""
 
 import sys
-sys.path.append('/src/saeed/cuda-workspace/async_gpu/python')
+sys.path.append('/home/subha/src/moose_async13/python')
 import moose
 
     

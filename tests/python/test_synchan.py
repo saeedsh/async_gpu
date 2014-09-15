@@ -48,9 +48,6 @@
 import sys
 sys.path.append('../../python')
 import moose
-import pylab
-import numpy
-import math
 
 def make_synapse(path):
     """Create a synapse with two time constants. Connect a spikegen to the
@@ -83,26 +80,11 @@ def make_synapse(path):
 if __name__ == '__main__':
     model = moose.Neutral('/model')
     syn, spikegen = make_synapse('/model/synchan')
-
-    graphs = moose.Neutral( '/graphs' )
-
-    # moose.connect( moose.Table( '%s/%s' % (graphs.path,'stim')), 'requestOut', stim, 'getOutputValue' )
-    moose.connect( moose.Table( '%s/%s' % (graphs.path,'syn')), 'requestOut', spikegen, 'getHasFired' )
-
     moose.setClock(0, 0.01)
     moose.useClock(0, '/model/##', 'process')
-    
-    moose.setClock(1, 0.1)
-    moose.useClock(1, '/graphs/##', 'process')
-    
     moose.reinit()
     moose.start(100)
 
-    for x in moose.wildcardFind( '/graphs/##[ISA=Table]' ):
-        t = numpy.arange( 0, len(x.vector), 1 )
-        pylab.plot( t, x.vector, label=x.name )
-    pylab.legend()
-    pylab.show()
 
 # 
 # test_synchan.py ends here

@@ -187,6 +187,7 @@ add_subdirectory(diffusion)
 add_subdirectory(device)
 add_subdirectory(benchmarks)
 add_subdirectory(kinetics)
+add_subdirectory(synapse)
 
 set(LIBRARIES ${LibBZip2_LIBRARIES})
 if(HDF5_FOUND)
@@ -228,6 +229,7 @@ target_link_libraries(moose.bin
     mesh
     signeur
     tinyxml
+    synapse
     diffusion 
     device
     benchmarks
@@ -269,6 +271,7 @@ if(BUILD_PYMOOSE)
 
     target_link_libraries(_moose 
         "-Wl,--whole-archive"
+        moose_builtins
         moosepython
         basecode
         msg
@@ -276,13 +279,13 @@ if(BUILD_PYMOOSE)
         randnum
         scheduling
         moose_mpi
-        moose_builtins
         utility 
         muparser
         biophysics 
         kinetics 
         ksolve
         tinyxml
+        synapse
         hsolve 
         mesh
         signeur

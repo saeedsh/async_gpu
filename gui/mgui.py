@@ -50,6 +50,7 @@ import code
 import traceback
 import sys
 sys.path.append('../python')
+#sys.path.append('utils')
 import os
 from collections import defaultdict
 import posixpath # We use this to create MOOSE paths
@@ -132,6 +133,7 @@ class MWindow(QtGui.QMainWindow):
         self.getMyDockWidgets()       
         self.setCentralWidget(self.mdiArea)
         self.mdiArea.setViewMode(QtGui.QMdiArea.TabbedView)
+        self.mdiArea.subWindowActivated.connect(self.switchSubwindowSlot)
         self.setPlugin('default', '/')
 
     def quit(self):
@@ -171,6 +173,7 @@ class MWindow(QtGui.QMainWindow):
                                    'list.txt')) as lfile:
                 self.pluginNames = [line.strip() for line in lfile]
                 self.pluginNames = [name for name in self.pluginNames if name]
+
         return self.pluginNames
 
     def loadPluginModule(self, name, re=False):
@@ -272,6 +275,8 @@ class MWindow(QtGui.QMainWindow):
         for subwin in self.mdiArea.subWindowList():
             subwin.close()
         self.setCurrentView('editor')
+        self.setCurrentView('run')
+        self.setCurrentView('editor')
         self.objectEditDockWidget.objectNameChanged.connect(
             self.plugin.getEditorView().getCentralWidget().updateItemSlot)
         return self.plugin
@@ -325,6 +330,17 @@ class MWindow(QtGui.QMainWindow):
             self.addToolBar(toolbar)
             toolbar.setVisible(True)
 
+    def switchSubwindowSlot(self, window):
+        """Change view based on what subwindow `window` is activated."""
+        if not window:
+            #print 'Window is None'
+            return
+        view = str(window.windowTitle()).partition(':')[0]
+        #print 'activated', window.windowTitle(), 'view=', view
+        #print 'setting current view'
+        self.setCurrentView(view)
+        
+
     def setCurrentView(self, view):
         """Set current view to a particular one: options are 'editor',
         'plot', 'run'. A plugin can provide more views if necessary.
@@ -333,6 +349,8 @@ class MWindow(QtGui.QMainWindow):
         targetView = None
         newSubWindow = True
         widget = self.plugin.getCurrentView().getCentralWidget()
+        current = self.mdiArea.activeSubWindow()
+        subwin = None
         for subwin in self.mdiArea.subWindowList():
             if subwin.widget() == widget:
                 newSubWindow = False
@@ -354,9 +372,12 @@ class MWindow(QtGui.QMainWindow):
                 dockWidget.setVisible(False)
         for dockWidget in self.plugin.getCurrentView().getToolPanes():
             if dockWidget not in dockWidgets:
-                self.addDockWidget(Qt.Qt.RightDockWidgetArea, dockWidget)
-            else:
-                dockWidget.setVisible(True)
+                if dockWidget.windowTitle() == "Scheduling":
+                    self.addDockWidget(Qt.Qt.TopDockWidgetArea, dockWidget)
+                else:
+
+                    self.addDockWidget(Qt.Qt.RightDockWidgetArea, dockWidget)
+            dockWidget.setVisible(True)
         subwin.setVisible(True)
         self.mdiArea.setActiveSubWindow(subwin)
         self.updateMenus()
@@ -367,6 +388,9 @@ class MWindow(QtGui.QMainWindow):
         return subwin
 
     def getMyToolBars(self):
+        self._toolBars = []
+        ''' 
+        #Harsha: removing the toolbars (plot,run,edit) from the Gui
         if not hasattr(self, 'viewToolBar'):
             self.viewToolBar = QtGui.QToolBar('View')
             #Harsha:removing plotView from the ToolBar
@@ -374,9 +398,9 @@ class MWindow(QtGui.QMainWindow):
                 if t.text() != "&Plot view":
                     self.viewToolBar.addAction(t)   
             #self.viewToolBar.addActions(self.getViewActions())
-
-        return [self.viewToolBar]
-
+        #return [self.viewToolBar]
+        '''
+        return self._toolBars
     def getFileMenu(self):
         if self.fileMenu is None:
             self.fileMenu = QtGui.QMenu('&File')
@@ -584,6 +608,7 @@ class MWindow(QtGui.QMainWindow):
                 pluginName = 'default'
             
             print 'Loaded model', ret['model'].path
+
             self.setPlugin(pluginName, ret['model'].path)
 
 
@@ -714,7 +739,8 @@ class MWindow(QtGui.QMainWindow):
                 modelName = dialog.getTargetPath()
                 if '/' in modelName:
                     raise mexception.ElementNameError('Model name cannot contain `/`')
-                ret = loadFile(str(fileName), '/model/%s' % (modelName), merge=False)
+                ret = loadFile(str(fileName),'%s' %(modelName),merge=False)
+                #ret = loadFile(str(fileName), '/model/%s' % (modelName), merge=False)
 		#Harsha: This will clear out object editor's objectpath and make it invisible
                 self.objectEditSlot('/',False)
 
