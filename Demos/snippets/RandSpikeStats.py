@@ -39,12 +39,10 @@ def make_model():
     plotf = moose.Table('plotf')
 
     ############### Set up parameters ###############
-    stim.vector = [maxFiringRate *
-                   numpy.sin(x * 2 * numpy.pi / sinePeriod)
-                   for x in range(sinePeriod)]
+    stim.vector = [maxFiringRate]
     stim.startTime = 0
-    stim.stopTime = sinePeriod
-    stim.loopTime = sinePeriod
+    stim.stopTime = 1
+    stim.loopTime = 1
     stim.stepSize = 0
     stim.stepPosition = 0
     stim.doLoop = 1
@@ -54,22 +52,14 @@ def make_model():
     syn.synapse[0].weight = 1
     syn.synapse[0].delay = 0
 
-    fire.thresh = 100  # Don't want it to spike, just to integrate
-    fire.tau = 1.0 / maxFiringRate
-
-    stats1.windowLength = int(1 / dt)
-    stats2.windowLength = int(1 / dt)
+    stats1.windowLength = 100
 
     ############### Connect up circuit ###############
     moose.connect(stim, 'output', spike, 'setRate')
     moose.connect(spike, 'spikeOut', syn.synapse[0], 'addSpike')
     moose.connect(spike, 'spikeOut', stats1, 'addSpike')
-    moose.connect(syn, 'activationOut', fire, 'activation')
-    moose.connect(stats2, 'requestOut', fire, 'getVm')
     moose.connect(plots, 'requestOut', stim, 'getOutputValue')
     moose.connect(plot1, 'requestOut', stats1, 'getWmean')
-    moose.connect(plot2, 'requestOut', stats2, 'getWmean')
-    moose.connect(plotf, 'requestOut', fire, 'getVm')
 
 
 def main():
@@ -78,7 +68,6 @@ def main():
     moose.useClock(0, '/stim', 'process')
     moose.useClock(1, '/spike', 'process')
     moose.useClock(2, '/syn', 'process')
-    moose.useClock(3, '/fire', 'process')
     moose.useClock(4, '/stats#', 'process')
     moose.useClock(8, '/plot#', 'process')
     for i in range(10):
@@ -92,8 +81,6 @@ def main():
     t = [i * dt for i in range(plot1.vector.size)]
     pylab.plot(t, plots.vector, label='stimulus')
     pylab.plot(t, plot1.vector, label='spike rate mean')
-    pylab.plot(t, plot2.vector, label='Vm mean')
-    pylab.plot(t, plotf.vector, label='Vm')
     pylab.legend()
     pylab.show()
 
