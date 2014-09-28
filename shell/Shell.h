@@ -512,6 +512,11 @@ class Shell
 		 */
 		void expectVector( bool flag );
 		
+		/**
+		 * An ugly way to have access to shell object. It is using by PN2S
+		 * to create another internal objects for double buffering
+		 */
+		static Id Current_Shell_Id;
 	private:
 		Element* shelle_; // It is useful for the Shell to have this.
 

@@ -234,6 +234,7 @@ Id init( int argc, char** argv, bool& doUnitTests, bool& doRegressionTests,
 	s->setShellElement( shelle );
 	s->setHardware( numCores, numNodes, myNode );
 	s->loadBalance();
+	Shell::Current_Shell_Id = shellId ;
 
 	/// Sets up the Elements that represent each class of Msg.
 	unsigned int numMsg = Msg::initMsgManagers();

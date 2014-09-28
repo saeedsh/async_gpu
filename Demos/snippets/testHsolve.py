@@ -183,7 +183,7 @@ def create_spine(parentCompt, parentObj, index, frac, length, dia, theta):
 def create_spine_with_receptor(compt, cell, index, frac):
     FaradayConst = 96485.3415    # s A / mol
     spineLength = 5.0e-6
-    spineDia = 4.0e-6
+    spineDia = 40.0e-6
     head = create_spine(compt, cell, index, frac, spineLength, spineDia, 0.0)
     gluR = moose.SynChan(head.path + '/gluR')
     gluR.tau1 = 4e-3
@@ -240,7 +240,7 @@ def make_spiny_compt():
     comptDia = 4e-6
     numSpines = 5
     compt = create_squid()
-    compt.inject = 1e-7
+    compt.inject = 0
     compt.x0 = 0
     compt.y0 = 0
     compt.z0 = 0
@@ -260,15 +260,8 @@ def make_spiny_compt():
         #r.synapse.num = 1
         syn = moose.element(r.path + '/handler/synapse')
         moose.connect(synInput, 'spikeOut', syn, 'addSpike', 'Single')
-        syn.weight = 0.2
-        syn.delay = i * 1.0e-4
-        """
-        path = '/n/head' + str(i)
-        sib1 = moose.element( path )
-        for j in range( i - 1 ):
-             sib2 = moose.element( '/n/head' + str(j) )
-             moose.connect( sib1, 'sibling', sib2, 'sibling', 'Single' )
-        """
+        syn.weight = 1
+        syn.delay = 0 * 1.0e-4
 
 
 def create_pool(compt, name, concInit):

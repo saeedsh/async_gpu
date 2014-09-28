@@ -42,6 +42,7 @@ vector< unsigned int > Shell::acked_( 1, 0 );
 bool Shell::doReinit_( 0 );
 bool Shell::isParserIdle_( 0 );
 double Shell::runtime_( 0.0 );
+Id Shell::Current_Shell_Id;
 
 const Cinfo* Shell::initCinfo()
 {
