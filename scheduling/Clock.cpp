@@ -556,7 +556,7 @@ void Clock::handleStep( const Eref& e, unsigned int numSteps )
 		unsigned int endStep = currentStep_ + stride_;
 		currentTime_ = info_.currTime = dt_ * endStep;
 		vector< unsigned int >::const_iterator k = activeTicksMap_.begin();
-		for ( vector< unsigned int>::iterator j = 
+		for ( vector< unsigned int>::iterator j =
 			activeTicks_.begin(); j != activeTicks_.end(); ++j ) {
 			if ( endStep % *j == 0 ) {
 				info_.dt = *j * dt_;
