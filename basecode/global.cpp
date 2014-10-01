@@ -63,7 +63,7 @@ namespace moose {
         errorSS.str("");
         errorSS << "Calling a hacky function to fix paths. Ticket #134"
             << endl;
-        dump(errorSS.str(), "BUG");
+//        dump(errorSS.str(), "BUG");
         pathA = moose::fixPath( pathA );
         string newPath = pathA + "/" + pathB;
         return moose::fixPath( newPath );
