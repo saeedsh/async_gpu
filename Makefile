@@ -242,7 +242,13 @@ endif
 # ifeq ($(USE_CUDA),1)
 LIBS+= -L/usr/local/cuda/lib64 -lcuda -lcudart -lcublas -lm -lgomp -L./hsolve/PN2S/libs/tbb/lib/intel64/gcc4.4/ -ltbb  
 CXXFLAGS+= -I./hsolve/PN2S/libs/tbb/include -DUSE_CUDA
-CUDAFLAGS = -G -O3 -Xcompiler -fopenmp -Xcompiler -fPIC -g -gencode arch=compute_35,code=compute_35 -gencode arch=compute_30,code=compute_30 -x cu  -I./libs -I./libs/tbb/include -I/usr/local/cuda/include -DUSE_CUDA
+ifeq ($(BUILD),debug)
+CUDAFLAGS = -O0
+else
+CUDAFLAGS = -O3
+endif
+CUDAFLAGS += -G -Xcompiler -fopenmp -Xcompiler -fPIC -g -gencode arch=compute_35,code=compute_35 -gencode arch=compute_30,code=compute_30 -x cu  -I./libs -I./libs/tbb/include -I/usr/local/cuda/include -DUSE_CUDA
+
 # endif
 
 # To disable numpy pass USE_NUMPY=0
