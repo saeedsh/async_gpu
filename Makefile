@@ -240,7 +240,7 @@ endif
 #Saeed
 # To use CUDA, pass USE_CUDA=1 in make command line
 # ifeq ($(USE_CUDA),1)
-LIBS+= -L/usr/local/cuda/lib64 -lcuda -lcudart -lcublas -lm -lgomp -L./hsolve/PN2S/libs/tbb/lib/intel64/gcc4.4/ -ltbb  
+LIBS+= -L/usr/local/cuda/lib64 -lcuda -lcudart -lcublas -lm -lgomp -L./hsolve/PN2S/libs/tbb/lib/intel64/gcc4.4/ -lpthread  
 CXXFLAGS+= -I./hsolve/PN2S/libs/tbb/include -DUSE_CUDA
 ifeq ($(BUILD),debug)
 CUDAFLAGS = -O0
